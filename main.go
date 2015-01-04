@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bmorton/deployster/fleet"
 	"github.com/rcrowley/go-tigertonic"
 	"log"
 )
@@ -36,9 +37,12 @@ func NewDeploysterService(listen string, version string) *DeploysterService {
 }
 
 func (self *DeploysterService) ConfigureRoutes() {
-	units := NewUnitResource()
+	fleetClient := fleet.NewClient("/var/run/fleet.sock")
+	deploys := DeployResource{fleetClient}
+	units := UnitResource{fleetClient}
 
 	self.Mux.Handle("GET", "/version", tigertonic.Version(self.AppVersion))
+	self.Mux.Handle("POST", "/services/{name}/deploys", tigertonic.Marshaled(deploys.Create))
 	self.Mux.Handle("GET", "/services/{name}/units", tigertonic.Marshaled(units.Index))
 }
 

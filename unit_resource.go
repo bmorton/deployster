@@ -27,12 +27,6 @@ type UnitResponse struct {
 
 type ExtractableUnit fleet.Unit
 
-func NewUnitResource() *UnitResource {
-	resource := &UnitResource{}
-	resource.Fleet = fleet.NewClient("/var/run/fleet.sock")
-	return resource
-}
-
 func (self *UnitResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitResponse, error) {
 	statusCode := http.StatusOK
 	response := &UnitResponse{}
