@@ -2,7 +2,6 @@ package fleet
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net"
 	"net/http"
 )
@@ -42,14 +41,9 @@ func (self *Client) Units() ([]Unit, error) {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
+	decoder := json.NewDecoder(response.Body)
 	var parsedResponse UnitsResponse
-	err = json.Unmarshal(body, &parsedResponse)
+	err = decoder.Decode(&parsedResponse)
 	if err != nil {
 		return nil, err
 	}
