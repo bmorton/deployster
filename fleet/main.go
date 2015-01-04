@@ -1,7 +1,9 @@
 package fleet
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 )
@@ -11,10 +13,17 @@ type Client struct {
 }
 
 type Unit struct {
-	CurrentState string `json:"currentState"`
-	DesiredState string `json:"desiredState"`
-	MachineID    string `json:"machineID"`
-	Name         string `json:"name"`
+	CurrentState string       `json:"currentState,omitempty"`
+	DesiredState string       `json:"desiredState"`
+	MachineID    string       `json:"machineID,omitempty"`
+	Name         string       `json:"name,omitempty"`
+	Options      []UnitOption `json:"options"`
+}
+
+type UnitOption struct {
+	Section string `json:"section"`
+	Name    string `json:"name"`
+	Value   string `json:"value"`
 }
 
 type UnitsResponse struct {
@@ -49,4 +58,25 @@ func (self *Client) Units() ([]Unit, error) {
 	}
 
 	return parsedResponse.Units, nil
+}
+
+func (self *Client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
+	url := fmt.Sprintf("http://sock/fleet/v1/units/%s@1.service", name)
+	unit := Unit{
+		DesiredState: "launched",
+		Options:      options,
+	}
+
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.Encode(unit)
+
+	r, err := http.NewRequest("PUT", url, &b)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Header.Add("Content-Type", "application/json")
+
+	return self.http.Do(r)
 }
