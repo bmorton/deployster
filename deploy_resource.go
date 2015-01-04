@@ -41,7 +41,7 @@ func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest
 	}
 	fmt.Printf("%#v\n", resp)
 
-	return http.StatusCreated, nil, "", nil
+	return http.StatusCreated, nil, nil, nil
 }
 
 func buildUnitFile(name string, version string) string {
