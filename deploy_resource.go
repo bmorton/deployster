@@ -30,12 +30,10 @@ type UnitTemplate struct {
 
 func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
-	unitContents := buildUnitFile(serviceName, req.Deploy.Version)
-	unitFile, _ := unit.NewUnitFile(unitContents)
-	options := schema.MapUnitFileToSchemaUnitOptions(unitFile)
-	serviceWithVersion := fmt.Sprintf("%s-%s", serviceName, req.Deploy.Version)
+	options := getUnitOptions(serviceName, req.Deploy.Version)
+	serviceWithVersion := fleetServiceName(serviceName, req.Deploy.Version)
 
-	resp, err := self.Fleet.StartUnit(serviceWithVersion, schemaToLocalUnit(options))
+	resp, err := self.Fleet.StartUnit(serviceWithVersion, options)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -44,12 +42,14 @@ func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest
 	return http.StatusCreated, nil, nil, nil
 }
 
-func buildUnitFile(name string, version string) string {
-	var unitFile bytes.Buffer
+func getUnitOptions(name string, version string) []fleet.UnitOption {
+	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(DOCKER_UNIT_TEMPLATE)
-	t.Execute(&unitFile, UnitTemplate{name, version})
+	t.Execute(&unitTemplate, UnitTemplate{name, version})
 
-	return unitFile.String()
+	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
+
+	return schemaToLocalUnit(schema.MapUnitFileToSchemaUnitOptions(unitFile))
 }
 
 func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
@@ -62,4 +62,8 @@ func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
 		})
 	}
 	return convertedOptions
+}
+
+func fleetServiceName(name string, version string) string {
+	return fmt.Sprintf("%s-%s", name, version)
 }
