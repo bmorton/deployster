@@ -43,6 +43,7 @@ func (self *DeploysterService) ConfigureRoutes() {
 
 	self.Mux.Handle("GET", "/version", tigertonic.Version(self.AppVersion))
 	self.Mux.Handle("POST", "/services/{name}/deploys", tigertonic.Marshaled(deploys.Create))
+	self.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", tigertonic.Marshaled(deploys.Destroy))
 	self.Mux.Handle("GET", "/services/{name}/units", tigertonic.Marshaled(units.Index))
 }
 

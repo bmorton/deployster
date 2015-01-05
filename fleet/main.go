@@ -61,7 +61,7 @@ func (self *Client) Units() ([]Unit, error) {
 }
 
 func (self *Client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
-	url := fmt.Sprintf("http://sock/fleet/v1/units/%s@1.service", name)
+	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
 	unit := Unit{
 		DesiredState: "launched",
 		Options:      options,
@@ -77,6 +77,17 @@ func (self *Client) StartUnit(name string, options []UnitOption) (*http.Response
 	}
 
 	r.Header.Add("Content-Type", "application/json")
+
+	return self.http.Do(r)
+}
+
+func (self *Client) DestroyUnit(name string) (*http.Response, error) {
+	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
+
+	r, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return self.http.Do(r)
 }

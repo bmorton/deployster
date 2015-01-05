@@ -31,15 +31,27 @@ type UnitTemplate struct {
 func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version)
-	serviceWithVersion := fleetServiceName(serviceName, req.Deploy.Version)
+	fleetServiceName := fleetServiceName(serviceName, req.Deploy.Version)
 
-	resp, err := self.Fleet.StartUnit(serviceWithVersion, options)
+	resp, err := self.Fleet.StartUnit(fleetServiceName, options)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
 	fmt.Printf("%#v\n", resp)
 
 	return http.StatusCreated, nil, nil, nil
+}
+
+func (self *DeployResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
+	fleetServiceName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
+
+	resp, err := self.Fleet.DestroyUnit(fleetServiceName)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
+	}
+	fmt.Printf("%#v\n", resp)
+
+	return http.StatusNoContent, nil, nil, nil
 }
 
 func getUnitOptions(name string, version string) []fleet.UnitOption {
@@ -65,5 +77,5 @@ func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
 }
 
 func fleetServiceName(name string, version string) string {
-	return fmt.Sprintf("%s-%s", name, version)
+	return fmt.Sprintf("%s-%s@1.service", name, version)
 }

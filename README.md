@@ -12,6 +12,11 @@ UNIT        MACHINE       ACTIVE  SUB
 carousel-9f88701@1.service  8dcea1bd.../100.78.68.84  active  running
 ```
 
+* Shutdown a deployed version of a service
+```ShellSession
+$ curl -XDELETE http://localhost:3000/v1/services/carousel/deploys/9f88701
+```
+
 * List all units associated to a service
 
 ```ShellSession
