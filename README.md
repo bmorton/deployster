@@ -36,6 +36,26 @@ Usage of ./deployster:
   -username="deployster": Username that will be used to authenticate with Deployster via HTTP basic auth
 ```
 
+
+### Example unit for starting Deployster
+
+```
+[Unit]
+Description=Deployster
+After=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+User=core
+TimeoutStartSec=0
+ExecStartPre=/usr/bin/docker pull bmorton/deployster
+ExecStartPre=-/usr/bin/docker rm -f deployster
+ExecStart=/usr/bin/docker run --name deployster -p 3000 bmorton/deployster
+ExecStartPost=/bin/sh -c "sleep 5; /usr/bin/etcdctl set /vulcand/upstreams/deployster/endpoints/deployster http://$COREOS_PRIVATE_IPV4:$(echo $(/usr/bin/docker port deployster 3000) | cut -d ':' -f 2)"
+ExecStop=/bin/sh -c "/usr/bin/etcdctl rm '/vulcand/upstreams/deployster/endpoints/deployster' ; /usr/bin/docker rm -f deployster"
+```
+
+
 ### Todo
 
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
