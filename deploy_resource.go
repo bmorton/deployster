@@ -10,6 +10,12 @@ import (
 	"net/http"
 	"net/url"
 	"text/template"
+	"time"
+)
+
+const (
+	destroyPreviousCheckTimeout time.Duration = 5 * time.Minute
+	destroyPreviousCheckDelay   time.Duration = 1 * time.Second
 )
 
 type DeployResource struct {
@@ -31,7 +37,6 @@ type UnitTemplate struct {
 }
 
 func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
-	var previousVersion string
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version)
 	fleetName := fleetServiceName(serviceName, req.Deploy.Version)
@@ -48,7 +53,7 @@ func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest
 			log.Printf("Can't destroy previous versions (%d previous versions), disabling destroy.")
 			req.Deploy.DestroyPrevious = false
 		} else {
-			previousVersion = versions[0]
+			go self.destroyPrevious(serviceName, versions[0], req.Deploy.Version)
 		}
 	}
 
@@ -57,10 +62,6 @@ func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest
 		return http.StatusInternalServerError, nil, nil, err
 	}
 	fmt.Printf("%#v\n", resp)
-
-	if req.Deploy.DestroyPrevious {
-		self.destroyPrevious(serviceName, previousVersion)
-	}
 
 	return http.StatusCreated, nil, nil, nil
 }
@@ -103,11 +104,39 @@ func fleetServiceName(name string, version string) string {
 	return fmt.Sprintf("%s-%s@1.service", name, version)
 }
 
-func (self *DeployResource) destroyPrevious(name string, version string) {
-	resp, err := self.Fleet.DestroyUnit(fleetServiceName(name, version))
-	if err != nil {
-		log.Printf("%#v\n", err)
-	} else {
-		fmt.Printf("%#v\n", resp)
+func (self *DeployResource) destroyPrevious(name string, previousVersion string, currentVersion string) {
+	timeoutChan := make(chan bool, 1)
+
+	go func() {
+		time.Sleep(destroyPreviousCheckTimeout)
+		timeoutChan <- true
+	}()
+
+	for {
+		startCheck := time.After(destroyPreviousCheckDelay)
+
+		select {
+		case <-startCheck:
+			log.Printf("Checking if %s:%s has finished launching...\n", name, currentVersion)
+			state, err := self.Fleet.UnitState(fleetServiceName(name, currentVersion))
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			if state.SubState == "running" {
+				log.Printf("%s:%s has launched, destroying %s.\n", name, currentVersion, previousVersion)
+				resp, err := self.Fleet.DestroyUnit(fleetServiceName(name, previousVersion))
+				if err != nil {
+					log.Printf("%#v\n", err)
+				} else {
+					fmt.Printf("%#v\n", resp)
+				}
+				return
+			}
+			log.Printf("%s:%s isn't running (currently %s).  Trying again in %s.\n", name, currentVersion, state.SubState, destroyPreviousCheckDelay)
+		case <-timeoutChan:
+			log.Printf("Timed out trying to destroy %s:%s after %s.\n", name, previousVersion, destroyPreviousCheckTimeout)
+			return
+		}
 	}
 }

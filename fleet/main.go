@@ -26,8 +26,21 @@ type UnitOption struct {
 	Value   string `json:"value"`
 }
 
+type UnitState struct {
+	Name        string `json:"name"`
+	Hash        string `json:"hash"`
+	MachineID   string `json:"machineID"`
+	LoadState   string `json:"systemdLoadState"`
+	ActiveState string `json:"systemdActiveState"`
+	SubState    string `json:"systemdSubState"`
+}
+
 type UnitsResponse struct {
 	Units []Unit `json:"units"`
+}
+
+type StatesResponse struct {
+	States []UnitState `json:"states"`
 }
 
 func NewClient(path string) Client {
@@ -90,4 +103,25 @@ func (self *Client) DestroyUnit(name string) (*http.Response, error) {
 	}
 
 	return self.http.Do(r)
+}
+
+func (self *Client) UnitState(name string) (UnitState, error) {
+	url := fmt.Sprintf("http://sock/fleet/v1/state?unitName=%s", name)
+	response, err := self.http.Get(url)
+	if err != nil {
+		return UnitState{}, err
+	}
+
+	decoder := json.NewDecoder(response.Body)
+	var parsedResponse StatesResponse
+	err = decoder.Decode(&parsedResponse)
+	if err != nil {
+		return UnitState{}, err
+	}
+
+	if len(parsedResponse.States) > 0 {
+		return parsedResponse.States[0], nil
+	} else {
+		return UnitState{}, nil
+	}
 }
