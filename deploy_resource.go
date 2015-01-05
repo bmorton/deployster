@@ -32,8 +32,9 @@ type DeployRequest struct {
 }
 
 type UnitTemplate struct {
-	Name    string
-	Version string
+	Name              string
+	Version           string
+	DockerHubUsername string
 }
 
 func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
@@ -80,8 +81,8 @@ func (self *DeployResource) Destroy(u *url.URL, h http.Header, req interface{}) 
 
 func getUnitOptions(name string, version string) []fleet.UnitOption {
 	var unitTemplate bytes.Buffer
-	t, _ := template.New("test").Parse(DOCKER_UNIT_TEMPLATE)
-	t.Execute(&unitTemplate, UnitTemplate{name, version})
+	t, _ := template.New("test").Parse(dockerUnitTemplate)
+	t.Execute(&unitTemplate, UnitTemplate{name, version, dockerHubUsername})
 
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 

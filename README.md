@@ -6,7 +6,7 @@ Deployster is a Golang HTTP service for simplifying deploys to a fleet cluster. 
 ### Features
 * Deploy a new version of a service from the Docker registry
 ```ShellSession
-$ curl -XPOST http://localhost:3000/v1/services/carousel/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"9f88701"}}'
+$ curl -XPOST http://localhost:3000/v1/services/carousel/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"9f88701", "destroy_previous": true}}'
 $ fleetctl list-units
 UNIT        MACHINE       ACTIVE  SUB
 carousel-9f88701@1.service  8dcea1bd.../100.78.68.84  active  running
@@ -25,11 +25,18 @@ $ curl http://localhost:3000/v1/services/carousel/units
 ```
 
 
+### Configurable options
+
+```ShellSession
+$ ./deployster -h
+Usage of ./deployster:
+  -docker-hub-username="": The username of the Docker Hub account that all deployable images are hosted under
+  -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
+```
+
 ### Todo
 
-* Remove hardcoding of `mmmhm` user in docker template
 * Authentication
-* Shut down previous version after deploy is complete
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
 * Allow multiple instances to be started at once
 * Add support for multiple unit templates

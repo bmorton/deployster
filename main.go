@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/bmorton/deployster/fleet"
 	"github.com/rcrowley/go-tigertonic"
 	"log"
@@ -9,9 +10,16 @@ import (
 // A version string that can be set at compile time with:
 //  -ldflags "-X main.AppVersion VERSION"
 var AppVersion string
+var listen string
+var dockerHubUsername string
+
+func init() {
+	flag.StringVar(&listen, "listen", "0.0.0.0:3000", "Specifies the IP and port that the HTTP server will listen on")
+	flag.StringVar(&dockerHubUsername, "docker-hub-username", "", "The username of the Docker Hub account that all deployable images are hosted under")
+	flag.Parse()
+}
 
 func main() {
-	listen := "0.0.0.0:3000"
 	log.Printf("Starting deployster on %s...\n", listen)
 	service := NewDeploysterService(listen, AppVersion)
 	service.ListenAndServe()
