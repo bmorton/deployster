@@ -5,6 +5,7 @@ import (
 	"github.com/bmorton/deployster/fleet"
 	"github.com/rcrowley/go-tigertonic"
 	"log"
+	"net/http"
 )
 
 // A version string that can be set at compile time with:
@@ -12,10 +13,14 @@ import (
 var AppVersion string
 var listen string
 var dockerHubUsername string
+var username string
+var password string
 
 func init() {
 	flag.StringVar(&listen, "listen", "0.0.0.0:3000", "Specifies the IP and port that the HTTP server will listen on")
 	flag.StringVar(&dockerHubUsername, "docker-hub-username", "", "The username of the Docker Hub account that all deployable images are hosted under")
+	flag.StringVar(&username, "username", "deployster", "Username that will be used to authenticate with Deployster via HTTP basic auth")
+	flag.StringVar(&password, "password", "mmmhm", "Password that will be used to authenticate with Deployster via HTTP basic auth")
 	flag.Parse()
 }
 
@@ -49,12 +54,19 @@ func (self *DeploysterService) ConfigureRoutes() {
 	deploys := DeployResource{fleetClient}
 	units := UnitResource{fleetClient}
 
-	self.Mux.Handle("GET", "/version", tigertonic.Version(self.AppVersion))
-	self.Mux.Handle("POST", "/services/{name}/deploys", tigertonic.Marshaled(deploys.Create))
-	self.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", tigertonic.Marshaled(deploys.Destroy))
-	self.Mux.Handle("GET", "/services/{name}/units", tigertonic.Marshaled(units.Index))
+	self.Mux.Handle("GET", "/version", authenticated(tigertonic.Version(self.AppVersion)))
+	self.Mux.Handle("POST", "/services/{name}/deploys", authenticated(tigertonic.Marshaled(deploys.Create)))
+	self.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", authenticated(tigertonic.Marshaled(deploys.Destroy)))
+	self.Mux.Handle("GET", "/services/{name}/units", authenticated(tigertonic.Marshaled(units.Index)))
 }
 
 func (self *DeploysterService) ListenAndServe() {
 	self.Server.ListenAndServe()
+}
+
+func authenticated(h http.Handler) tigertonic.FirstHandler {
+	return tigertonic.HTTPBasicAuth(
+		map[string]string{username: password},
+		"Deployster",
+		h)
 }

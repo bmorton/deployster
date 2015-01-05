@@ -32,11 +32,12 @@ $ ./deployster -h
 Usage of ./deployster:
   -docker-hub-username="": The username of the Docker Hub account that all deployable images are hosted under
   -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
+  -password="mmmhm": Password that will be used to authenticate with Deployster via HTTP basic auth
+  -username="deployster": Username that will be used to authenticate with Deployster via HTTP basic auth
 ```
 
 ### Todo
 
-* Authentication
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
 * Allow multiple instances to be started at once
 * Add support for multiple unit templates
