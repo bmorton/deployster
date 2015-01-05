@@ -37,6 +37,24 @@ func FindServiceUnits(serviceName string, units []fleet.Unit) []VersionedUnit {
 	return versionedUnits
 }
 
+func FindServiceVersions(serviceName string, units []fleet.Unit) []string {
+	uniqueVersions := make(map[string]bool)
+
+	for _, u := range units {
+		extractable := ExtractableUnit(u)
+		if extractable.ExtractBaseName() == serviceName {
+			uniqueVersions[extractable.ExtractVersion()] = true
+		}
+	}
+
+	versions := make([]string, 0, len(uniqueVersions))
+	for k := range uniqueVersions {
+		versions = append(versions, k)
+	}
+
+	return versions
+}
+
 func (self *ExtractableUnit) ExtractBaseName() string {
 	s := strings.Split(self.Name, "-")
 	return s[0]
