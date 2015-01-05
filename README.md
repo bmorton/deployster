@@ -28,7 +28,6 @@ $ curl http://localhost:3000/v1/services/carousel/units
 ### Todo
 
 * Remove hardcoding of `mmmhm` user in docker template
-* Dockerfile
 * Authentication
 * Shut down previous version after deploy is complete
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
