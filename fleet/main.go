@@ -8,8 +8,15 @@ import (
 	"net/http"
 )
 
-type Client struct {
+type client struct {
 	http *http.Client
+}
+
+type Client interface {
+	Units() ([]Unit, error)
+	StartUnit(name string, options []UnitOption) (*http.Response, error)
+	DestroyUnit(name string) (*http.Response, error)
+	UnitState(name string) (UnitState, error)
 }
 
 type Unit struct {
@@ -43,7 +50,7 @@ type StatesResponse struct {
 	States []UnitState `json:"states"`
 }
 
-func NewClient(path string) Client {
+func NewClient(path string) client {
 	dialFunc := func(string, string) (net.Conn, error) {
 		return net.Dial("unix", path)
 	}
@@ -54,10 +61,10 @@ func NewClient(path string) Client {
 		},
 	}
 
-	return Client{&httpClient}
+	return client{&httpClient}
 }
 
-func (self *Client) Units() ([]Unit, error) {
+func (self *client) Units() ([]Unit, error) {
 	response, err := self.http.Get("http://sock/fleet/v1/units")
 	if err != nil {
 		return nil, err
@@ -73,7 +80,7 @@ func (self *Client) Units() ([]Unit, error) {
 	return parsedResponse.Units, nil
 }
 
-func (self *Client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
+func (self *client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
 	unit := Unit{
 		DesiredState: "launched",
@@ -94,7 +101,7 @@ func (self *Client) StartUnit(name string, options []UnitOption) (*http.Response
 	return self.http.Do(r)
 }
 
-func (self *Client) DestroyUnit(name string) (*http.Response, error) {
+func (self *client) DestroyUnit(name string) (*http.Response, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
 
 	r, err := http.NewRequest("DELETE", url, nil)
@@ -105,7 +112,7 @@ func (self *Client) DestroyUnit(name string) (*http.Response, error) {
 	return self.http.Do(r)
 }
 
-func (self *Client) UnitState(name string) (UnitState, error) {
+func (self *client) UnitState(name string) (UnitState, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/state?unitName=%s", name)
 	response, err := self.http.Get(url)
 	if err != nil {

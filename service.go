@@ -27,8 +27,8 @@ func NewDeploysterService(listen string, version string) *DeploysterService {
 
 func (self *DeploysterService) ConfigureRoutes() {
 	fleetClient := fleet.NewClient("/var/run/fleet.sock")
-	deploys := DeploysResource{fleetClient}
-	units := UnitsResource{fleetClient}
+	deploys := DeploysResource{&fleetClient}
+	units := UnitsResource{&fleetClient}
 
 	self.Mux.Handle("GET", "/version", authenticated(tigertonic.Version(self.AppVersion)))
 	self.Mux.Handle("POST", "/services/{name}/deploys", authenticated(tigertonic.Marshaled(deploys.Create)))
