@@ -36,8 +36,6 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     After=docker.service
 
     [Service]
-    EnvironmentFile=/etc/environment
-    User=core
     TimeoutStartSec=0
     ExecStartPre=/usr/bin/docker pull bmorton/deployster
     ExecStartPre=-/usr/bin/docker rm -f deployster
