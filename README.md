@@ -93,6 +93,7 @@ Usage of ./deployster:
 
 ### Todo
 
+* Move these todos to GitHub issues
 * Test coverage (started, but needs more ;/)
 * Tutorial/examples for how to set this up, what's required, the limitations, and how your Docker images should be configured
 * Documentation
