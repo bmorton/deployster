@@ -69,7 +69,7 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
 4. List units associated to a service
 
     ```ShellSession
-    $ curl http://localhost:3000/v1/services/carousel/units -u deployster:DONTUSETHIS
+    $ curl http://localhost:3000/v1/services/railsapp/units -u deployster:DONTUSETHIS
     {"units":[{"service":"railsapp","instance":"1","version":"7bdae1c","current_state":"launched","desired_state":"launched","machine_id":"8dcea1bd8c304e1bbe2c25dce526109c"}]}
     ```
 
