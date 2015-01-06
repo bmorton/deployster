@@ -19,9 +19,10 @@ To use Deployster, you'll need:
 
 * **CoreOS cluster** - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
 * **Images hosted on the public Docker Hub Registry** - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub Registry.  There's a todo item below to make this better.
-* **Expose an HTTP service on port 3000** - This should be configurable in the future too.
-* **Containers are stateless** - Linking in volumes is currently not supported.  Again, something for the future.
+* **HTTP service exposed on port 3000 of container** - This should be configurable in the future too.
+* **Stateless containers** - Linking in volumes is currently not supported.  Again, something for the future.
 * **Vulcand running** - For [zero downtime deploys][zero-downtime] of new versions of services.
+* **Automatic environment configuration** - As we're currently reusing the same unit file for all services, environment variables can't be passed to containers at boot, so containers need to use something like [etcd], [consul], or [confd][confd] to bootstrap themselves at launch.
 
 
 ### Getting started
@@ -79,11 +80,11 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     ```
 
 
-### Configurable options
+### Command line options
 
 ```ShellSession
 $ deployster -h
-Usage of ./deployster:
+Usage of deployster:
   -docker-hub-username="": The username of the Docker Hub account that all deployable images are hosted under
   -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
   -password="mmmhm": Password that will be used to authenticate with Deployster via HTTP basic auth
@@ -120,3 +121,6 @@ Code and documentation copyright 2015 Brian Morton. Code released under the MIT 
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
 [registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
 [zero-downtime]: https://coreos.com/blog/zero-downtime-frontend-deploys-vulcand/
+[etcd]: https://github.com/coreos/etcd
+[consul]: https://www.consul.io
+[confd]: https://github.com/kelseyhightower/confd
