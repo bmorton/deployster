@@ -97,8 +97,7 @@ Usage of ./deployster:
 
 * Move these todos to GitHub issues
 * Test coverage (started, but needs more ;/)
-* Tutorial/examples for how to set this up, what's required, the limitations, and how your Docker images should be configured
-* Documentation
+* Documentation and more extensive examples/tutorials
 * HTTPS support
 * Vagrantfile for easy experimentation and testing
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
