@@ -2,7 +2,9 @@
 
 Deployster is a Golang HTTP service for simplifying deploys to a CoreOS [Fleet cluster][fleet-cluster].  It is extremely opinionated in how you tag your Docker images, where you store them, and how the service's unit files are configured.
 
-This project is currently in use for a few side projects, but is not currently in heavy production use.
+This project is also available as `bmorton/deployster` publically on the [Docker Hub Registry][deployster-docker-hub].
+
+Currently this project is in use for a few side projects, but is not currently in heavy production use.  [Yammer][yammer] has been exploring this path for production and this will likely be used in some prototyping there.
 
 
 ### Features
@@ -16,7 +18,7 @@ This project is currently in use for a few side projects, but is not currently i
 To use Deployster, you'll need:
 
 * **CoreOS cluster** - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
-* **Images hosted on the public Docker Hub** - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub.  There's a todo item below to make this better.
+* **Images hosted on the public Docker Hub Registry** - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub Registry.  There's a todo item below to make this better.
 * **Expose an HTTP service on port 3000** - This should be configurable in the future too.
 * **Containers are stateless** - Linking in volumes is currently not supported.  Again, something for the future.
 * **Vulcand running** - For [zero downtime deploys][zero-downtime] of new versions of services.
@@ -32,7 +34,7 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     [Unit]
     Description=Deployster
     After=docker.service
-    
+
     [Service]
     EnvironmentFile=/etc/environment
     User=core
@@ -43,7 +45,7 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     ExecStop=/usr/bin/docker rm -f deployster
     ```
 
-2. Start up a new service that is available on the Docker Hub at mycompany/railsapp:9f88701 (username/service:version)
+2. Start up a new service that is available on the Docker Hub Registry at mycompany/railsapp:9f88701 (username/service:version)
 
     ```ShellSession
     $ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"9f88701", "destroy_previous": false}}' -u deployster:DONTUSETHIS
@@ -115,6 +117,8 @@ Pull requests and bug reports are greatly appreciated and encouraged.  If you'd 
 Code and documentation copyright 2015 Brian Morton. Code released under the MIT license.
 
 [fleet-cluster]: https://coreos.com/using-coreos/clustering/
+[deployster-docker-hub]: https://registry.hub.docker.com/u/bmorton/deployster/
+[yammer]: https://www.yammer.com
 [digitalocean]: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-coreos-cluster-on-digitalocean
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
 [registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
