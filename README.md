@@ -15,11 +15,11 @@ This project is currently in use for a few side projects, but is not currently i
 
 To use Deployster, you'll need:
 
-* CoreOS cluster - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
-* Images hosted on the public Docker Hub - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub.  There's a todo item below to make this better.
-* Expose an HTTP service on port 3000 - This should be configurable in the future too.
-* Containers are stateless and don't need volumes linked - Again, something for the future.
-* Have Vulcand running for [zero downtime deploys][zero-downtime] of new versions of services
+* **CoreOS cluster** - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
+* **Images hosted on the public Docker Hub** - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub.  There's a todo item below to make this better.
+* **Expose an HTTP service on port 3000** - This should be configurable in the future too.
+* **Containers are stateless** - Linking in volumes is currently not supported.  Again, something for the future.
+* **Vulcand running** - For [zero downtime deploys][zero-downtime] of new versions of services.
 
 
 ### Getting started
@@ -28,54 +28,55 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
 
 1. Using a unit file like this one, run `fleetctl start deployster.service`
 
-```
-[Unit]
-Description=Deployster
-After=docker.service
-
-[Service]
-EnvironmentFile=/etc/environment
-User=core
-TimeoutStartSec=0
-ExecStartPre=/usr/bin/docker pull bmorton/deployster
-ExecStartPre=-/usr/bin/docker rm -f deployster
-ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-hub-username=mycompany
-ExecStop=/usr/bin/docker rm -f deployster
-```
+    ```
+    [Unit]
+    Description=Deployster
+    After=docker.service
+    
+    [Service]
+    EnvironmentFile=/etc/environment
+    User=core
+    TimeoutStartSec=0
+    ExecStartPre=/usr/bin/docker pull bmorton/deployster
+    ExecStartPre=-/usr/bin/docker rm -f deployster
+    ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-    hub-username=mycompany
+    ExecStop=/usr/bin/docker rm -f deployster
+    ```
 
 2. Start up a new service that is available on the Docker Hub at mycompany/railsapp:9f88701 (username/service:version)
 
-```ShellSession
-$ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"9f88701", "destroy_previous": false}}' -u deployster:DONTUSETHIS
-$ fleetctl list-units
-UNIT                        MACHINE                  ACTIVE  SUB
-railsapp-9f88701@1.service  8dcea1bd.../100.10.11.1  active  running
-```
+    ```ShellSession
+    $ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"9f88701", "destroy_previous": false}}' -u deployster:DONTUSETHIS
+    $ fleetctl list-units
+    UNIT                        MACHINE                  ACTIVE  SUB
+    railsapp-9f88701@1.service  8dcea1bd.../100.10.11.1  active  running
+    ```
 
 3. Deploy an updated version while automatically destroying the previous version once the new one is online
 
-```ShellSession
-$ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"7bdae1c", "destroy_previous": true}}' -u deployster:DONTUSETHIS
-$ fleetctl list-units
-UNIT                        MACHINE                  ACTIVE      SUB
-railsapp-7bdae1c@1.service  8dcea1bd.../100.10.11.1  activating  start-pre
-railsapp-9f88701@1.service  8dcea1bd.../100.10.11.1  active      running
-$ fleetctl list-units
-UNIT                        MACHINE                  ACTIVE  SUB
-railsapp-7bdae1c@1.service  8dcea1bd.../100.10.11.1  active  running
-```
+    ```ShellSession
+    $ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"7bdae1c", "destroy_previous": true}}' -u deployster:DONTUSETHIS
+    $ fleetctl list-units
+    UNIT                        MACHINE                  ACTIVE      SUB
+    railsapp-7bdae1c@1.service  8dcea1bd.../100.10.11.1  activating  start-pre
+    railsapp-9f88701@1.service  8dcea1bd.../100.10.11.1  active      running
+    $ fleetctl list-units
+    UNIT                        MACHINE                  ACTIVE  SUB
+    railsapp-7bdae1c@1.service  8dcea1bd.../100.10.11.1  active  running
+    ```
 
 4. List units associated to a service
 
-```ShellSession
-$ curl http://localhost:3000/v1/services/carousel/units -u deployster:DONTUSETHIS
-{"units":[{"service":"railsapp","instance":"1","version":"7bdae1c","current_state":"launched","desired_state":"launched","machine_id":"8dcea1bd8c304e1bbe2c25dce526109c"}]}
-```
+    ```ShellSession
+    $ curl http://localhost:3000/v1/services/carousel/units -u deployster:DONTUSETHIS
+    {"units":[{"service":"railsapp","instance":"1","version":"7bdae1c","current_state":"launched","desired_state":"launched","machine_id":"8dcea1bd8c304e1bbe2c25dce526109c"}]}
+    ```
 
 5. Manually shutdown a version of a service
-```ShellSession
-$ curl -XDELETE http://localhost:3000/v1/services/railsapp/deploys/7bdae1c -u deployster:DONTUSETHIS
-```
+
+    ```ShellSession
+    $ curl -XDELETE http://localhost:3000/v1/services/railsapp/deploys/7bdae1c -u deployster:DONTUSETHIS
+    ```
 
 
 ### Configurable options
