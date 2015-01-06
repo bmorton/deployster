@@ -1,10 +1,11 @@
 package server
 
 import (
-	"github.com/bmorton/deployster/fleet"
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/bmorton/deployster/fleet"
 )
 
 type UnitsResource struct {
@@ -15,11 +16,11 @@ type UnitsResponse struct {
 	Units []VersionedUnit `json:"units"`
 }
 
-func (self *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitsResponse, error) {
+func (ur *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitsResponse, error) {
 	statusCode := http.StatusOK
 	response := &UnitsResponse{}
 
-	units, err := self.Fleet.Units()
+	units, err := ur.Fleet.Units()
 	if err != nil {
 		log.Printf("%#v\n", err)
 		return http.StatusInternalServerError, nil, nil, err
