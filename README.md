@@ -60,6 +60,7 @@ ExecStop=/bin/sh -c "/usr/bin/etcdctl rm '/vulcand/upstreams/deployster/endpoint
 
 * Test coverage
 * Tutorial/examples for how to set this up, what's required, the limitations, and how your Docker images should be configured
+* Documentation
 * HTTPS support
 * Vagrantfile for easy experimentation and testing
 * Allow tasks, such as `rake db:migrate` to be run before a deploy
