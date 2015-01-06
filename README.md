@@ -39,7 +39,7 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     TimeoutStartSec=0
     ExecStartPre=/usr/bin/docker pull bmorton/deployster
     ExecStartPre=-/usr/bin/docker rm -f deployster
-    ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-    hub-username=mycompany
+    ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-hub-username=mycompany
     ExecStop=/usr/bin/docker rm -f deployster
     ```
 
