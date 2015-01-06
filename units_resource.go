@@ -17,7 +17,7 @@ type UnitsResponse struct {
 
 func (self *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitsResponse, error) {
 	statusCode := http.StatusOK
-	response := &UnitResponse{}
+	response := &UnitsResponse{}
 
 	units, err := self.Fleet.Units()
 	if err != nil {
