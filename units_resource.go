@@ -7,15 +7,15 @@ import (
 	"net/url"
 )
 
-type UnitResource struct {
+type UnitsResource struct {
 	Fleet fleet.Client
 }
 
-type UnitResponse struct {
+type UnitsResponse struct {
 	Units []VersionedUnit `json:"units"`
 }
 
-func (self *UnitResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitResponse, error) {
+func (self *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int, http.Header, *UnitsResponse, error) {
 	statusCode := http.StatusOK
 	response := &UnitResponse{}
 

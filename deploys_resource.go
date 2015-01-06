@@ -18,17 +18,17 @@ const (
 	destroyPreviousCheckDelay   time.Duration = 1 * time.Second
 )
 
-type DeployResource struct {
+type DeploysResource struct {
 	Fleet fleet.Client
+}
+
+type DeployRequest struct {
+	Deploy Deploy `json:"deploy"`
 }
 
 type Deploy struct {
 	Version         string `json:"version"`
 	DestroyPrevious bool   `json:"destroy_previous"`
-}
-
-type DeployRequest struct {
-	Deploy Deploy `json:"deploy"`
 }
 
 type UnitTemplate struct {
@@ -37,7 +37,7 @@ type UnitTemplate struct {
 	DockerHubUsername string
 }
 
-func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
+func (self *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version)
 	fleetName := fleetServiceName(serviceName, req.Deploy.Version)
@@ -67,7 +67,7 @@ func (self *DeployResource) Create(u *url.URL, h http.Header, req *DeployRequest
 	return http.StatusCreated, nil, nil, nil
 }
 
-func (self *DeployResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
+func (self *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
 	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
 
 	resp, err := self.Fleet.DestroyUnit(fleetName)
@@ -105,7 +105,7 @@ func fleetServiceName(name string, version string) string {
 	return fmt.Sprintf("%s-%s@1.service", name, version)
 }
 
-func (self *DeployResource) destroyPrevious(name string, previousVersion string, currentVersion string) {
+func (self *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string) {
 	timeoutChan := make(chan bool, 1)
 
 	go func() {
