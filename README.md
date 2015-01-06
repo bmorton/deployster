@@ -1,6 +1,6 @@
 # Deployster
 
-Deployster is a Golang HTTP service for simplifying deploys to a fleet cluster.  It is extremely opinionated in how you tag your Docker images, where you store them, and how the service's unit files are configured.
+Deployster is a Golang HTTP service for simplifying deploys to a CoreOS [Fleet cluster][fleet-cluster].  It is extremely opinionated in how you tag your Docker images, where you store them, and how the service's unit files are configured.
 
 This project is currently in use for a few side projects, but is not currently in heavy production use.
 
@@ -112,6 +112,7 @@ Pull requests and bug reports are greatly appreciated and encouraged.  If you'd 
 
 Code and documentation copyright 2015 Brian Morton. Code released under the MIT license.
 
+[fleet-cluster]: https://coreos.com/using-coreos/clustering/
 [digitalocean]: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-coreos-cluster-on-digitalocean
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
 [registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
