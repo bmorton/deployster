@@ -58,11 +58,10 @@ func (self *DeploysResource) Create(u *url.URL, h http.Header, req *DeployReques
 		}
 	}
 
-	resp, err := self.Fleet.StartUnit(fleetName, options)
+	_, err := self.Fleet.StartUnit(fleetName, options)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	fmt.Printf("%#v\n", resp)
 
 	return http.StatusCreated, nil, nil, nil
 }
@@ -70,11 +69,10 @@ func (self *DeploysResource) Create(u *url.URL, h http.Header, req *DeployReques
 func (self *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
 	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
 
-	resp, err := self.Fleet.DestroyUnit(fleetName)
+	_, err := self.Fleet.DestroyUnit(fleetName)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	fmt.Printf("%#v\n", resp)
 
 	return http.StatusNoContent, nil, nil, nil
 }
@@ -126,11 +124,9 @@ func (self *DeploysResource) destroyPrevious(name string, previousVersion string
 			}
 			if state.SubState == "running" {
 				log.Printf("%s:%s has launched, destroying %s.\n", name, currentVersion, previousVersion)
-				resp, err := self.Fleet.DestroyUnit(fleetServiceName(name, previousVersion))
+				_, err := self.Fleet.DestroyUnit(fleetServiceName(name, previousVersion))
 				if err != nil {
 					log.Printf("%#v\n", err)
-				} else {
-					fmt.Printf("%#v\n", resp)
 				}
 				return
 			}
