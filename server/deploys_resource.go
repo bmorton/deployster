@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -19,7 +19,8 @@ const (
 )
 
 type DeploysResource struct {
-	Fleet fleet.Client
+	Fleet             fleet.Client
+	DockerHubUsername string
 }
 
 type DeployRequest struct {
@@ -39,7 +40,7 @@ type UnitTemplate struct {
 
 func (self *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
-	options := getUnitOptions(serviceName, req.Deploy.Version)
+	options := getUnitOptions(serviceName, req.Deploy.Version, self.DockerHubUsername)
 	fleetName := fleetServiceName(serviceName, req.Deploy.Version)
 
 	if req.Deploy.DestroyPrevious {
@@ -77,7 +78,7 @@ func (self *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{})
 	return http.StatusNoContent, nil, nil, nil
 }
 
-func getUnitOptions(name string, version string) []fleet.UnitOption {
+func getUnitOptions(name string, version string, dockerHubUsername string) []fleet.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
 	t.Execute(&unitTemplate, UnitTemplate{name, version, dockerHubUsername})

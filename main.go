@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/bmorton/deployster/server"
 	"log"
 )
 
@@ -25,6 +26,6 @@ func init() {
 
 func main() {
 	log.Printf("Starting deployster on %s...\n", listen)
-	service := NewDeploysterService(listen, AppVersion)
+	service := server.NewDeploysterService(listen, AppVersion, username, password, dockerHubUsername)
 	service.ListenAndServe()
 }

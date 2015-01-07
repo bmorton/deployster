@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"github.com/bmorton/deployster/support"
@@ -14,7 +14,7 @@ type DeploysterServiceTestSuite struct {
 }
 
 func (suite *DeploysterServiceTestSuite) SetupSuite() {
-	suite.Subject = NewDeploysterService("0.0.0.0:3000", "v1.0")
+	suite.Subject = NewDeploysterService("0.0.0.0:3000", "v1.0", "username", "password", "mmmhm")
 }
 
 func (suite *DeploysterServiceTestSuite) TestGetVersionRequiresAuthentication() {

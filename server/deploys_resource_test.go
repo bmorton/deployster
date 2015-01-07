@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"github.com/bmorton/deployster/fleet"
@@ -19,12 +19,12 @@ type DeploysResourceTestSuite struct {
 }
 
 func (suite *DeploysResourceTestSuite) SetupSuite() {
-	suite.Service = NewDeploysterService("0.0.0.0:3000", "v1.0")
+	suite.Service = NewDeploysterService("0.0.0.0:3000", "v1.0", "username", "password", "mmmhm")
 }
 
 func (suite *DeploysResourceTestSuite) SetupTest() {
 	suite.FleetClientMock = new(mocks.Client)
-	suite.Subject = DeploysResource{suite.FleetClientMock}
+	suite.Subject = DeploysResource{suite.FleetClientMock, "mmmhm"}
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
