@@ -11,6 +11,7 @@ Currently this project is in use for a few side projects, but is not in heavy pr
 * Deploy a new version of a service from the Docker registry (with optionally destroying the previously running version)
 * Shutdown a deployed version of a service
 * List all units associated to a service
+* Basic authentication and HTTPS support
 
 
 ### Requirements and limitations
@@ -29,7 +30,7 @@ To use Deployster, you'll need:
 
 After the above requirements are fulfilled, you can launch Deployster with Fleet.
 
-1. Using a unit file like this one, run `fleetctl start deployster.service`
+1. Using a unit file like this one (replacing `password` and `docker-hub-username`), run `fleetctl start deployster.service`
 
     ```
     [Unit]
@@ -40,6 +41,8 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     TimeoutStartSec=0
     ExecStartPre=/usr/bin/docker pull bmorton/deployster
     ExecStartPre=-/usr/bin/docker rm -f deployster
+    # For HTTPS, put your certificate and private key in /home/core/ssl and add:
+    # `-v /home/core/ssl:/ssl` to docker options and `-cert=/ssl/server.crt -key=/ssl/server.key` to deployster options
     ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-hub-username=mycompany
     ExecStop=/usr/bin/docker rm -f deployster
     ```
@@ -85,24 +88,13 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
 ```ShellSession
 $ deployster -h
 Usage of deployster:
+  -cert="": Path to certificate to be used for serving HTTPS
   -docker-hub-username="": The username of the Docker Hub account that all deployable images are hosted under
+  -key="": Path to private key to bse used for serving HTTPS
   -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
   -password="mmmhm": Password that will be used to authenticate with Deployster via HTTP basic auth
   -username="deployster": Username that will be used to authenticate with Deployster via HTTP basic auth
 ```
-
-
-### Todo
-
-* Move these todos to GitHub issues
-* Test coverage (started, but needs more ;/)
-* Documentation and more extensive examples/tutorials
-* HTTPS support
-* Vagrantfile for easy experimentation and testing
-* Allow tasks, such as `rake db:migrate` to be run before a deploy
-* Allow multiple instances to be started at once
-* Add support for multiple unit templates
-* Add support for Docker containers that need volumes linked (not stateless)
 
 
 ### Contributing
