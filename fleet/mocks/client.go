@@ -11,8 +11,6 @@ type Client struct {
 	mock.Mock
 }
 
-var _ fleet.Client = &Client{}
-
 func (m *Client) Units() ([]fleet.Unit, error) {
 	ret := m.Called()
 
