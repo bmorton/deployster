@@ -1,9 +1,10 @@
 package mocks
 
 import (
+	"net/http"
+
 	"github.com/bmorton/deployster/fleet"
 	"github.com/stretchr/testify/mock"
-	"net/http"
 )
 
 type Client struct {

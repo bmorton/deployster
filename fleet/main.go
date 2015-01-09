@@ -19,6 +19,8 @@ type Client interface {
 	UnitState(name string) (UnitState, error)
 }
 
+var _ Client = &client{}
+
 type Unit struct {
 	CurrentState string       `json:"currentState,omitempty"`
 	DesiredState string       `json:"desiredState"`
@@ -64,8 +66,8 @@ func NewClient(path string) client {
 	return client{&httpClient}
 }
 
-func (self *client) Units() ([]Unit, error) {
-	response, err := self.http.Get("http://sock/fleet/v1/units")
+func (c *client) Units() ([]Unit, error) {
+	response, err := c.http.Get("http://sock/fleet/v1/units")
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (self *client) Units() ([]Unit, error) {
 	return parsedResponse.Units, nil
 }
 
-func (self *client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
+func (c *client) StartUnit(name string, options []UnitOption) (*http.Response, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
 	unit := Unit{
 		DesiredState: "launched",
@@ -98,10 +100,10 @@ func (self *client) StartUnit(name string, options []UnitOption) (*http.Response
 
 	r.Header.Add("Content-Type", "application/json")
 
-	return self.http.Do(r)
+	return c.http.Do(r)
 }
 
-func (self *client) DestroyUnit(name string) (*http.Response, error) {
+func (c *client) DestroyUnit(name string) (*http.Response, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/units/%s", name)
 
 	r, err := http.NewRequest("DELETE", url, nil)
@@ -109,12 +111,12 @@ func (self *client) DestroyUnit(name string) (*http.Response, error) {
 		return nil, err
 	}
 
-	return self.http.Do(r)
+	return c.http.Do(r)
 }
 
-func (self *client) UnitState(name string) (UnitState, error) {
+func (c *client) UnitState(name string) (UnitState, error) {
 	url := fmt.Sprintf("http://sock/fleet/v1/state?unitName=%s", name)
-	response, err := self.http.Get(url)
+	response, err := c.http.Get(url)
 	if err != nil {
 		return UnitState{}, err
 	}

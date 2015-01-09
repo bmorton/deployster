@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/bmorton/deployster/fleet"
 	"strings"
+
+	"github.com/bmorton/deployster/fleet"
 )
 
 type VersionedUnit struct {
@@ -55,19 +56,19 @@ func FindServiceVersions(serviceName string, units []fleet.Unit) []string {
 	return versions
 }
 
-func (self *ExtractableUnit) ExtractBaseName() string {
-	s := strings.Split(self.Name, "-")
+func (eu *ExtractableUnit) ExtractBaseName() string {
+	s := strings.Split(eu.Name, "-")
 	return s[0]
 }
 
-func (self *ExtractableUnit) ExtractVersion() string {
-	s := strings.Split(self.Name, "-")
+func (eu *ExtractableUnit) ExtractVersion() string {
+	s := strings.Split(eu.Name, "-")
 	end := strings.Index(s[1], "@")
 	return s[1][:end]
 }
 
-func (self *ExtractableUnit) ExtractInstance() string {
-	s := strings.Split(self.Name, "@")
+func (eu *ExtractableUnit) ExtractInstance() string {
+	s := strings.Split(eu.Name, "@")
 	end := strings.Index(s[1], ".")
 	return s[1][:end]
 }

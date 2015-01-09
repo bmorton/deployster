@@ -1,9 +1,10 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/bmorton/deployster/fleet"
 	"github.com/rcrowley/go-tigertonic"
-	"net/http"
 )
 
 type DeploysterService struct {
@@ -34,24 +35,24 @@ func NewDeploysterService(listen string, version string, username string, passwo
 	return &service
 }
 
-func (self *DeploysterService) ConfigureRoutes() {
+func (ds *DeploysterService) ConfigureRoutes() {
 	fleetClient := fleet.NewClient("/var/run/fleet.sock")
-	deploys := DeploysResource{&fleetClient, self.DockerHubUsername}
+	deploys := DeploysResource{&fleetClient, ds.DockerHubUsername}
 	units := UnitsResource{&fleetClient}
 
-	self.Mux.Handle("GET", "/version", self.authenticated(tigertonic.Version(self.AppVersion)))
-	self.Mux.Handle("POST", "/services/{name}/deploys", self.authenticated(tigertonic.Marshaled(deploys.Create)))
-	self.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", self.authenticated(tigertonic.Marshaled(deploys.Destroy)))
-	self.Mux.Handle("GET", "/services/{name}/units", self.authenticated(tigertonic.Marshaled(units.Index)))
+	ds.Mux.Handle("GET", "/version", ds.authenticated(tigertonic.Version(ds.AppVersion)))
+	ds.Mux.Handle("POST", "/services/{name}/deploys", ds.authenticated(tigertonic.Marshaled(deploys.Create)))
+	ds.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", ds.authenticated(tigertonic.Marshaled(deploys.Destroy)))
+	ds.Mux.Handle("GET", "/services/{name}/units", ds.authenticated(tigertonic.Marshaled(units.Index)))
 }
 
-func (self *DeploysterService) ListenAndServe() {
-	self.Server.ListenAndServe()
+func (ds *DeploysterService) ListenAndServe() {
+	ds.Server.ListenAndServe()
 }
 
-func (self *DeploysterService) authenticated(h http.Handler) tigertonic.FirstHandler {
+func (ds *DeploysterService) authenticated(h http.Handler) tigertonic.FirstHandler {
 	return tigertonic.HTTPBasicAuth(
-		map[string]string{self.Username: self.Password},
+		map[string]string{ds.Username: ds.Password},
 		"Deployster",
 		h)
 }
