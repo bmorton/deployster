@@ -1,3 +1,14 @@
+## v0.2.0 (unreleased)
+
+Features:
+
+  * HTTPS support
+
+Fixes:
+
+  * Improve code to be more idiomatic
+
+
 ## v0.1.0
 
 Features:
