@@ -46,8 +46,16 @@ func (ds *DeploysterService) ConfigureRoutes() {
 	ds.Mux.Handle("GET", "/services/{name}/units", ds.authenticated(tigertonic.Marshaled(units.Index)))
 }
 
-func (ds *DeploysterService) ListenAndServe() {
-	ds.Server.ListenAndServe()
+func (ds *DeploysterService) ListenAndServe() error {
+	return ds.Server.ListenAndServe()
+}
+
+func (ds *DeploysterService) ListenAndServeTLS(certPath string, keyPath string) error {
+	return ds.Server.ListenAndServeTLS(certPath, keyPath)
+}
+
+func (ds *DeploysterService) Close() error {
+	return ds.Server.Close()
 }
 
 func (ds *DeploysterService) authenticated(h http.Handler) tigertonic.FirstHandler {
