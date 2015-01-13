@@ -38,6 +38,7 @@ func main() {
 	go func() {
 		var err error
 		if certPath != "" && keyPath != "" {
+			log.Println("Certificate and private key provided, HTTPS enabled.")
 			err = service.ListenAndServeTLS(certPath, keyPath)
 		} else {
 			err = service.ListenAndServe()
