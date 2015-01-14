@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/bmorton/deployster/fleet"
+	"github.com/fsouza/go-dockerclient"
 	"github.com/rcrowley/go-tigertonic"
 )
 
@@ -37,13 +38,16 @@ func NewDeploysterService(listen string, version string, username string, passwo
 
 func (ds *DeploysterService) ConfigureRoutes() {
 	fleetClient := fleet.NewClient("/var/run/fleet.sock")
+	dockerClient, _ := docker.NewClient("unix:///var/run/docker.sock")
 	deploys := DeploysResource{&fleetClient, ds.DockerHubUsername}
 	units := UnitsResource{&fleetClient}
+	tasks := TasksResource{dockerClient, ds.DockerHubUsername}
 
 	ds.Mux.Handle("GET", "/version", ds.authenticated(tigertonic.Version(ds.AppVersion)))
 	ds.Mux.Handle("POST", "/services/{name}/deploys", ds.authenticated(tigertonic.Marshaled(deploys.Create)))
 	ds.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", ds.authenticated(tigertonic.Marshaled(deploys.Destroy)))
 	ds.Mux.Handle("GET", "/services/{name}/units", ds.authenticated(tigertonic.Marshaled(units.Index)))
+	ds.Mux.Handle("POST", "/services/{name}/tasks", ds.authenticated(tigertonic.Marshaled(tasks.Create)))
 }
 
 func (ds *DeploysterService) ListenAndServe() error {
