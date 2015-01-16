@@ -19,50 +19,74 @@ type TaskRequest struct {
 	Task Task `json:"task"`
 }
 
+type TaskResponse struct {
+	Output string `json:"output"`
+}
+
 type Task struct {
 	Version string `json:"version"`
 	Command string `json:"command"`
 }
 
-func (tr *TasksResource) Create(u *url.URL, h http.Header, req *TaskRequest) (int, http.Header, interface{}, error) {
+func (tr *TasksResource) Create(u *url.URL, h http.Header, req *TaskRequest) (int, http.Header, *TaskResponse, error) {
 	serviceName := u.Query().Get("name")
 	taskName := fmt.Sprintf("%s-%s-task", serviceName, req.Task.Version)
 	imageName := fmt.Sprintf("%s/%s:%s", tr.DockerHubUsername, serviceName, req.Task.Version)
 
+	container, err := tr.runContainer(taskName, imageName, req.Task.Command)
+	if err != nil {
+		return http.StatusInternalServerError, nil, &TaskResponse{}, err
+	}
+
+	output, err := tr.readContainerOutput(container.ID)
+	if err != nil {
+		return http.StatusInternalServerError, nil, &TaskResponse{}, err
+	}
+
+	err = tr.Docker.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
+	if err != nil {
+		log.Printf("WARNING: Container could not be cleaned up (%s)", err)
+	}
+
+	return http.StatusCreated, nil, &TaskResponse{output}, nil
+}
+
+func (tr *TasksResource) runContainer(taskName string, imageName string, command string) (*docker.Container, error) {
 	container, err := tr.Docker.CreateContainer(docker.CreateContainerOptions{
 		Name: taskName,
 		Config: &docker.Config{
 			Image:        imageName,
-			Cmd:          []string{req.Task.Command},
+			Cmd:          []string{command},
 			AttachStdout: true,
 			AttachStderr: true,
 		},
 	})
 	if err != nil {
-		return http.StatusInternalServerError, nil, nil, err
+		return &docker.Container{}, err
 	}
 
-	log.Printf("%#v", container)
-	tr.Docker.StartContainer(container.ID, &docker.HostConfig{})
+	err = tr.Docker.StartContainer(container.ID, &docker.HostConfig{})
+	if err != nil {
+		return &docker.Container{}, err
+	}
 
+	return container, nil
+}
+
+func (tr *TasksResource) readContainerOutput(containerID string) (string, error) {
 	var buf bytes.Buffer
-	err = tr.Docker.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    container.ID,
+	err := tr.Docker.AttachToContainer(docker.AttachToContainerOptions{
+		Container:    containerID,
 		OutputStream: &buf,
 		Logs:         true,
 		Stdout:       true,
 		Stderr:       true,
 		Stream:       true,
 	})
-	if err != nil {
-		return http.StatusInternalServerError, nil, nil, err
-	}
-	log.Println(buf.String())
 
-	err = tr.Docker.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	if err != nil {
-		return http.StatusInternalServerError, nil, nil, err
+		return "", err
 	}
 
-	return http.StatusCreated, nil, nil, nil
+	return buf.String(), nil
 }
