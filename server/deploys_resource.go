@@ -53,7 +53,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		versions := FindServiceVersions(u.Query().Get("name"), units)
 
 		if len(versions) != 1 {
-			log.Printf("Can't destroy previous versions (%d previous versions), disabling destroy.")
+			log.Printf("Can't destroy previous versions (%d previous versions), disabling destroy.", len(versions))
 			req.Deploy.DestroyPrevious = false
 		} else {
 			go dr.destroyPrevious(serviceName, versions[0], req.Deploy.Version)
