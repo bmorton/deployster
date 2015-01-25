@@ -5,15 +5,22 @@ import (
 	"net/http"
 )
 
+// flushWriter is used to stream responses to the provided io.Writer instead of
+// buffering and sending in blocks once the request is fully processed.
+//
+// The implementation comes from this StackOverflow post:
+// http://stackoverflow.com/questions/19292113/not-buffered-http-responsewritter-in-golang
 type flushWriter struct {
-	f http.Flusher
-	w io.Writer
+	flusher http.Flusher
+	writer  io.Writer
 }
 
+// Write satisifies the io.Writer interface so that flushWriter can wrap the
+// supplied io.Writer with a Flusher.
 func (fw *flushWriter) Write(p []byte) (n int, err error) {
-	n, err = fw.w.Write(p)
-	if fw.f != nil {
-		fw.f.Flush()
+	n, err = fw.writer.Write(p)
+	if fw.flusher != nil {
+		fw.flusher.Flush()
 	}
 	return
 }

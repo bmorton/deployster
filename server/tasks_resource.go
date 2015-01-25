@@ -9,24 +9,39 @@ import (
 	"github.com/fsouza/go-dockerclient"
 )
 
+// TasksResource is the HTTP resource responsible for launching new tasks via
+// the Docker API in an opinionated and conventional way.  Using the provided
+// DockerHubUsername and the payload passed to the Create endpoint, we can
+// construct the image name to pull from the Docker Hub Registry so that the
+// task can be launched.
 type TasksResource struct {
 	Docker            *docker.Client
 	DockerHubUsername string
 }
 
+// TaskRequest is the top-level wrapper for the Task in the JSON payload sent by
+// the client.
 type TaskRequest struct {
 	Task Task `json:"task"`
 }
 
-type TaskResponse struct {
-	Output string `json:"output"`
-}
-
+// Task is the JSON payload required to launch a new task.
 type Task struct {
 	Version string `json:"version"`
 	Command string `json:"command"`
 }
 
+// Create handles launching new tasks and streaming the output back over the
+// http.ResponseWriter.  It expects a JSON payload that can be decoded into a
+// TaskRequest.
+//
+// If an error occurs decoding the JSON or creating/running the container, an
+// Internal Server Error will be returned in the response.  However, if an error
+// occurs after this point, we've already sent a 200 OK and started streaming
+// the response body.  This means the task was successfully launched, but the
+// task could have possibly errored out.  At the end of the task output, the
+// exit code of the task will be printed so that it can be handled by the client
+// if necessary.
 func (tr *TasksResource) Create(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	decoder := json.NewDecoder(r.Body)
@@ -60,6 +75,8 @@ func (tr *TasksResource) Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// runContainer creates and starts a Docker container using the provided task
+// name, image name, and command.
 func (tr *TasksResource) runContainer(taskName string, imageName string, command string) (*docker.Container, error) {
 	container, err := tr.Docker.CreateContainer(docker.CreateContainerOptions{
 		Name: taskName,
@@ -82,10 +99,14 @@ func (tr *TasksResource) runContainer(taskName string, imageName string, command
 	return container, nil
 }
 
+// streamContainerOutput attaches to the container ID's STDOUT/STDERR and
+// streams the output to the provided io.Writer wrapped in a flushWriter so that
+// we can continuously flush the output to the client as its provided from the
+// Docker API.
 func (tr *TasksResource) streamContainerOutput(containerID string, writer io.Writer) error {
-	fw := flushWriter{w: writer}
+	fw := flushWriter{writer: writer}
 	if f, ok := writer.(http.Flusher); ok {
-		fw.f = f
+		fw.flusher = f
 	}
 	err := tr.Docker.AttachToContainer(docker.AttachToContainerOptions{
 		Container:    containerID,
