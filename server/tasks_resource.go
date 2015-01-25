@@ -15,8 +15,16 @@ import (
 // construct the image name to pull from the Docker Hub Registry so that the
 // task can be launched.
 type TasksResource struct {
-	Docker            *docker.Client
+	Docker            DockerClient
 	DockerHubUsername string
+}
+
+type DockerClient interface {
+	CreateContainer(docker.CreateContainerOptions) (*docker.Container, error)
+	StartContainer(string, *docker.HostConfig) error
+	AttachToContainer(docker.AttachToContainerOptions) error
+	InspectContainer(string) (*docker.Container, error)
+	RemoveContainer(docker.RemoveContainerOptions) error
 }
 
 // TaskRequest is the top-level wrapper for the Task in the JSON payload sent by
@@ -104,10 +112,7 @@ func (tr *TasksResource) runContainer(taskName string, imageName string, command
 // we can continuously flush the output to the client as its provided from the
 // Docker API.
 func (tr *TasksResource) streamContainerOutput(containerID string, writer io.Writer) error {
-	fw := flushWriter{writer: writer}
-	if f, ok := writer.(http.Flusher); ok {
-		fw.flusher = f
-	}
+	fw := newFlushWriter(writer)
 	err := tr.Docker.AttachToContainer(docker.AttachToContainerOptions{
 		Container:    containerID,
 		OutputStream: &fw,

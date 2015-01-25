@@ -24,3 +24,12 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 	}
 	return
 }
+
+func newFlushWriter(w io.Writer) flushWriter {
+	fw := flushWriter{writer: w}
+	if f, ok := w.(http.Flusher); ok {
+		fw.flusher = f
+	}
+
+	return fw
+}
