@@ -1,11 +1,10 @@
 package server
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/fsouza/go-dockerclient"
 )
@@ -28,27 +27,37 @@ type Task struct {
 	Command string `json:"command"`
 }
 
-func (tr *TasksResource) Create(u *url.URL, h http.Header, req *TaskRequest) (int, http.Header, *TaskResponse, error) {
-	serviceName := u.Query().Get("name")
+func (tr *TasksResource) Create(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	decoder := json.NewDecoder(r.Body)
+	var req TaskRequest
+	err := decoder.Decode(&req)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, fmt.Sprintf("ERROR: %s\n", err))
+		return
+	}
+	serviceName := r.URL.Query().Get("name")
 	taskName := fmt.Sprintf("%s-%s-task", serviceName, req.Task.Version)
 	imageName := fmt.Sprintf("%s/%s:%s", tr.DockerHubUsername, serviceName, req.Task.Version)
 
 	container, err := tr.runContainer(taskName, imageName, req.Task.Command)
 	if err != nil {
-		return http.StatusInternalServerError, nil, &TaskResponse{}, err
+		w.WriteHeader(http.StatusInternalServerError)
+		io.WriteString(w, fmt.Sprintf("ERROR: %s\n", err))
+		return
 	}
+	w.WriteHeader(http.StatusOK)
 
-	output, err := tr.readContainerOutput(container.ID)
+	err = tr.streamContainerOutput(container.ID, w)
 	if err != nil {
-		return http.StatusInternalServerError, nil, &TaskResponse{}, err
+		io.WriteString(w, fmt.Sprintf("ERROR: %s\n", err))
 	}
 
 	err = tr.Docker.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	if err != nil {
-		log.Printf("WARNING: Container could not be cleaned up (%s)", err)
+		io.WriteString(w, fmt.Sprintf("WARNING: Container could not be cleaned up (%s)\n", err))
 	}
-
-	return http.StatusCreated, nil, &TaskResponse{output}, nil
 }
 
 func (tr *TasksResource) runContainer(taskName string, imageName string, command string) (*docker.Container, error) {
@@ -73,11 +82,15 @@ func (tr *TasksResource) runContainer(taskName string, imageName string, command
 	return container, nil
 }
 
-func (tr *TasksResource) readContainerOutput(containerID string) (string, error) {
-	var buf bytes.Buffer
+func (tr *TasksResource) streamContainerOutput(containerID string, writer io.Writer) error {
+	fw := flushWriter{w: writer}
+	if f, ok := writer.(http.Flusher); ok {
+		fw.f = f
+	}
 	err := tr.Docker.AttachToContainer(docker.AttachToContainerOptions{
 		Container:    containerID,
-		OutputStream: &buf,
+		OutputStream: &fw,
+		ErrorStream:  &fw,
 		Logs:         true,
 		Stdout:       true,
 		Stderr:       true,
@@ -85,8 +98,14 @@ func (tr *TasksResource) readContainerOutput(containerID string) (string, error)
 	})
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return buf.String(), nil
+	container, err := tr.Docker.InspectContainer(containerID)
+	if err != nil {
+		return err
+	}
+	io.WriteString(&fw, fmt.Sprintf("\nExited (%d) %s\n", container.State.ExitCode, container.State.Error))
+
+	return nil
 }

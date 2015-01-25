@@ -47,7 +47,7 @@ func (ds *DeploysterService) ConfigureRoutes() {
 	ds.Mux.Handle("POST", "/services/{name}/deploys", ds.authenticated(tigertonic.Marshaled(deploys.Create)))
 	ds.Mux.Handle("DELETE", "/services/{name}/deploys/{version}", ds.authenticated(tigertonic.Marshaled(deploys.Destroy)))
 	ds.Mux.Handle("GET", "/services/{name}/units", ds.authenticated(tigertonic.Marshaled(units.Index)))
-	ds.Mux.Handle("POST", "/services/{name}/tasks", ds.authenticated(tigertonic.Marshaled(tasks.Create)))
+	ds.Mux.Handle("POST", "/services/{name}/tasks", ds.authenticated(http.HandlerFunc(tasks.Create)))
 }
 
 func (ds *DeploysterService) ListenAndServe() error {
