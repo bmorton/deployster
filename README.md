@@ -2,7 +2,7 @@
 
 Deployster is a Golang HTTP service for simplifying deploys to a CoreOS [Fleet cluster][fleet-cluster].  It is extremely opinionated in how you tag your Docker images, where you store them, and how the service's unit files are configured.
 
-This project is also available as `bmorton/deployster` publically on the [Docker Hub Registry][deployster-docker-hub].
+This project is also available as `bmorton/deployster` publicly on the [Docker Hub Registry][deployster-docker-hub].
 
 Currently this project is in use for a few side projects, but is not in heavy production use.  At this point it's experimental and feedback is very welcomed and appreciated.  [Yammer][yammer] has been exploring a similar path for production and this will likely be used in some prototyping there, as well.
 
