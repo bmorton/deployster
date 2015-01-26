@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/fsouza/go-dockerclient"
 )
@@ -41,6 +42,10 @@ type Task struct {
 	Command string `json:"command"`
 }
 
+// defaultTaskTimeout is the amount of time that we allow for a task to run
+// before it is forcefully killed.  This timeout is currently set to 10 minutes.
+const defaultTaskTimeout time.Duration = 1 * time.Second
+
 // Create handles launching new tasks and streaming the output back over the
 // http.ResponseWriter.  It expects a JSON payload that can be decoded into a
 // TaskRequest.
@@ -74,12 +79,15 @@ func (tr *TasksResource) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 
-	err = tr.streamContainerOutput(container.ID, w)
+	err = tr.streamContainerOutputWithTimeout(container.ID, w, defaultTaskTimeout)
 	if err != nil {
 		io.WriteString(w, fmt.Sprintf("ERROR: %s\n", err))
 	}
 
-	err = tr.Docker.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
+	err = tr.Docker.RemoveContainer(docker.RemoveContainerOptions{
+		ID:    container.ID,
+		Force: true,
+	})
 	if err != nil {
 		io.WriteString(w, fmt.Sprintf("WARNING: Container could not be cleaned up (%s)\n", err))
 	}
@@ -134,6 +142,33 @@ func (tr *TasksResource) streamContainerOutput(containerID string, writer io.Wri
 		return err
 	}
 	io.WriteString(&fw, fmt.Sprintf("\nExited (%d) %s\n", container.State.ExitCode, container.State.Error))
+
+	return nil
+}
+
+// streamContainerOutputWithTimeout will spawn two goroutines: one for
+// fulfilling the streamContainerOutput request and one for managing the
+// timeout.
+func (tr *TasksResource) streamContainerOutputWithTimeout(containerID string, writer io.Writer, timeout time.Duration) error {
+	timeoutChan := make(chan bool, 1)
+	go func() {
+		time.Sleep(timeout)
+		timeoutChan <- true
+	}()
+
+	successChan := make(chan error, 1)
+	go func() {
+		successChan <- tr.streamContainerOutput(containerID, writer)
+	}()
+
+	select {
+	case err := <-successChan:
+		if err != nil {
+			return err
+		}
+	case <-timeoutChan:
+		io.WriteString(writer, fmt.Sprintf("\nExited (124) The task timed out after %s. Forcefully removing container.\n", timeout))
+	}
 
 	return nil
 }

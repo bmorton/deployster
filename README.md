@@ -27,6 +27,11 @@ To use Deployster, you'll need:
 * **Automatic environment configuration** - As we're currently reusing the same unit file for all services, environment variables can't be passed to containers at boot, so containers need to use something like [etcd], [consul], or [confd][confd] to bootstrap themselves at launch.
 
 
+#### Task limitations
+
+Tasks are limited to 10 minutes of running time, after which they will be forcefully removed.  If the task is killed, it will have an exit code of 124.  In the future, this timeout may be configurable per task to override the default timeout.
+
+
 ### Getting started
 
 After the above requirements are fulfilled, you can launch Deployster with Fleet.
