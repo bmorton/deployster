@@ -12,6 +12,7 @@ Currently this project is in use for a few side projects, but is not in heavy pr
 * Shutdown a deployed version of a service
 * List all units associated to a service
 * Basic authentication and HTTPS support
+* Custom task launching for doing things like [migrating a database][running-rails-migrations] using a given service image and version
 
 
 ### Requirements and limitations
@@ -56,7 +57,19 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     railsapp-9f88701@1.service  8dcea1bd.../100.10.11.1  active  running
     ```
 
-3. Deploy an updated version while automatically destroying the previous version once the new one is online
+3. Run a custom task, like migrating the database, using the same conventions
+
+    ```ShellSession
+    $ curl -XPOST http://localhost:3000/v1/services/railsapp/tasks -H "Content-Type: application/json" -d '{"task":{"version":"7bdae1c", "command":"bundle exec rake db:migrate"}}' -u deployster:DONTUSETHIS
+    == 20150118005051 CreateUsers: migrating =====================================
+    -- create_table(:users)
+       -> 0.0017s
+    == 20150118005051 CreateUsers: migrated (0.0018s) ============================
+
+    Exited (0)
+    ```
+
+4. Deploy an updated version while automatically destroying the previous version once the new one is online
 
     ```ShellSession
     $ curl -XPOST http://localhost:3000/v1/services/railsapp/deploys -H "Content-Type: application/json" -d '{"deploy":{"version":"7bdae1c", "destroy_previous": true}}' -u deployster:DONTUSETHIS
@@ -69,14 +82,14 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     railsapp-7bdae1c@1.service  8dcea1bd.../100.10.11.1  active  running
     ```
 
-4. List units associated to a service
+5. List units associated to a service
 
     ```ShellSession
     $ curl http://localhost:3000/v1/services/railsapp/units -u deployster:DONTUSETHIS
     {"units":[{"service":"railsapp","instance":"1","version":"7bdae1c","current_state":"launched","desired_state":"launched","machine_id":"8dcea1bd8c304e1bbe2c25dce526109c"}]}
     ```
 
-5. Manually shutdown a version of a service
+6. Manually shutdown a version of a service
 
     ```ShellSession
     $ curl -XDELETE http://localhost:3000/v1/services/railsapp/deploys/7bdae1c -u deployster:DONTUSETHIS
@@ -109,6 +122,7 @@ Code and documentation copyright 2015 Brian Morton. Code released under the MIT 
 [fleet-cluster]: https://coreos.com/using-coreos/clustering/
 [deployster-docker-hub]: https://registry.hub.docker.com/u/bmorton/deployster/
 [yammer]: https://www.yammer.com
+[running-rails-migrations]: http://guides.rubyonrails.org/active_record_migrations.html#running-migrations
 [digitalocean]: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-coreos-cluster-on-digitalocean
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
 [registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
