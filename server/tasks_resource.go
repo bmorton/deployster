@@ -44,7 +44,7 @@ type Task struct {
 
 // defaultTaskTimeout is the amount of time that we allow for a task to run
 // before it is forcefully killed.  This timeout is currently set to 10 minutes.
-const defaultTaskTimeout time.Duration = 1 * time.Second
+const defaultTaskTimeout time.Duration = 600 * time.Second
 
 // Create handles launching new tasks and streaming the output back over the
 // http.ResponseWriter.  It expects a JSON payload that can be decoded into a
