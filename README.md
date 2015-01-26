@@ -49,7 +49,7 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
     ExecStartPre=-/usr/bin/docker rm -f deployster
     # For HTTPS, put your certificate and private key in /home/core/ssl and add:
     # `-v /home/core/ssl:/ssl` to docker options and `-cert=/ssl/server.crt -key=/ssl/server.key` to deployster options
-    ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-hub-username=mycompany
+    ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster -password=DONTUSETHIS -docker-hub-username=mycompany
     ExecStop=/usr/bin/docker rm -f deployster
     ```
 
