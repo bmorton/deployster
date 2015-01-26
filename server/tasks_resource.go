@@ -19,6 +19,8 @@ type TasksResource struct {
 	DockerHubUsername string
 }
 
+// DockerClient is the interface required for TasksResource to be able to
+// create, start, attach, inspect, and remove Docker containers.
 type DockerClient interface {
 	CreateContainer(docker.CreateContainerOptions) (*docker.Container, error)
 	StartContainer(string, *docker.HostConfig) error

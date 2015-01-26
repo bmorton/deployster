@@ -117,6 +117,47 @@ func (suite *TasksResourceTestSuite) TestCreateReturnsServerErrorWhenContainerFa
 	assert.Equal(suite.T(), 500, w.Code)
 }
 
+func (suite *TasksResourceTestSuite) TestCreateReturnsExitCodeOnSuccess() {
+	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
+	suite.DockerClientMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
+	suite.DockerClientMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
+	suite.DockerClientMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
+		State: docker.State{
+			ExitCode: 0,
+		},
+	}, nil)
+	suite.DockerClientMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
+
+	req, _ := http.NewRequest("POST", "http://example.com/services/carousel/tasks?name=carousel", bytes.NewBuffer(validRequestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.Subject.Create(w, req)
+
+	assert.Equal(suite.T(), "\nExited (0) \n", w.Body.String())
+}
+
+func (suite *TasksResourceTestSuite) TestCreateReturnsExitCodeOnFailure() {
+	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
+	suite.DockerClientMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
+	suite.DockerClientMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
+	suite.DockerClientMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
+		State: docker.State{
+			ExitCode: 127,
+			Error:    "Something went wrong",
+		},
+	}, nil)
+	suite.DockerClientMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
+
+	req, _ := http.NewRequest("POST", "http://example.com/services/carousel/tasks?name=carousel", bytes.NewBuffer(validRequestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.Subject.Create(w, req)
+
+	assert.Equal(suite.T(), "\nExited (127) Something went wrong\n", w.Body.String())
+}
+
 func TestTasksResourceTestSuite(t *testing.T) {
 	suite.Run(t, new(TasksResourceTestSuite))
 }

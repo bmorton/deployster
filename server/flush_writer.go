@@ -25,6 +25,8 @@ func (fw *flushWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
+// newFlushWriter creates a flushWriter using the io.Writer provided as the
+// writer and flusher.
 func newFlushWriter(w io.Writer) flushWriter {
 	fw := flushWriter{writer: w}
 	if f, ok := w.(http.Flusher); ok {
