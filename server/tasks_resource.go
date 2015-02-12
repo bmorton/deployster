@@ -12,12 +12,12 @@ import (
 
 // TasksResource is the HTTP resource responsible for launching new tasks via
 // the Docker API in an opinionated and conventional way.  Using the provided
-// DockerHubUsername and the payload passed to the Create endpoint, we can
-// construct the image name to pull from the Docker Hub Registry so that the
-// task can be launched.
+// ImagePrefix and the payload passed to the Create endpoint, we can construct
+// the image name to pull from the Docker Hub Registry so that the task can be
+// launched.
 type TasksResource struct {
-	Docker            DockerClient
-	DockerHubUsername string
+	Docker      DockerClient
+	ImagePrefix string
 }
 
 // DockerClient is the interface required for TasksResource to be able to
@@ -69,7 +69,7 @@ func (tr *TasksResource) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	serviceName := r.URL.Query().Get("name")
 	taskName := fmt.Sprintf("%s-%s-task", serviceName, req.Task.Version)
-	imageName := fmt.Sprintf("%s/%s:%s", tr.DockerHubUsername, serviceName, req.Task.Version)
+	imageName := fmt.Sprintf("%s/%s:%s", tr.ImagePrefix, serviceName, req.Task.Version)
 
 	container, err := tr.runContainer(taskName, imageName, req.Task.Command)
 	if err != nil {

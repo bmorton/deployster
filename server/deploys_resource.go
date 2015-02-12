@@ -15,13 +15,21 @@ import (
 )
 
 const (
+	// destroyPreviousCheckTimeout is the amount of time to attempt checking for
+	// the new version of the service to boot.  If checking exceeds this time, the
+	// previous version will not be destroyed.
 	destroyPreviousCheckTimeout time.Duration = 5 * time.Minute
-	destroyPreviousCheckDelay   time.Duration = 1 * time.Second
+
+	// destroyPreviousCheckDelay is the amount of to wait between checks for the
+	// boot completion of the new version.
+	destroyPreviousCheckDelay time.Duration = 1 * time.Second
 )
 
+// DeploysResource is the HTTP resource responsible for creating and destroying
+// deployments of services.
 type DeploysResource struct {
-	Fleet             fleet.Client
-	DockerHubUsername string
+	Fleet       fleet.Client
+	ImagePrefix string
 }
 
 type DeployRequest struct {
@@ -34,14 +42,14 @@ type Deploy struct {
 }
 
 type UnitTemplate struct {
-	Name              string
-	Version           string
-	DockerHubUsername string
+	Name        string
+	Version     string
+	ImagePrefix string
 }
 
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
-	options := getUnitOptions(serviceName, req.Deploy.Version, dr.DockerHubUsername)
+	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
 	fleetName := fleetServiceName(serviceName, req.Deploy.Version)
 
 	if req.Deploy.DestroyPrevious {
@@ -79,10 +87,10 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 	return http.StatusNoContent, nil, nil, nil
 }
 
-func getUnitOptions(name string, version string, dockerHubUsername string) []fleet.UnitOption {
+func getUnitOptions(name string, version string, imagePrefix string) []fleet.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
-	t.Execute(&unitTemplate, UnitTemplate{name, version, dockerHubUsername})
+	t.Execute(&unitTemplate, UnitTemplate{name, version, imagePrefix})
 
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 
