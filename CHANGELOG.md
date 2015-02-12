@@ -4,6 +4,7 @@ Features:
 
   * HTTPS support
   * Custom task launching for doing things like migrating a database using a given service image and version ([#14][issue-14])
+  * Private registry support ([#20][issue-20])
 
 Fixes:
 
@@ -21,3 +22,4 @@ Features:
   * HTTP basic authentication for all endpoints
 
 [issue-14]: https://github.com/bmorton/deployster/pull/14
+[issue-20]: https://github.com/bmorton/deployster/pull/20

@@ -13,6 +13,7 @@ Currently this project is in use for a few side projects, but is not in heavy pr
 * List all units associated to a service
 * Basic authentication and HTTPS support
 * Custom task launching for doing things like [migrating a database][running-rails-migrations] using a given service image and version
+* Source images from the public Docker Hub Registry or a private registry
 
 
 ### Requirements and limitations
@@ -20,7 +21,6 @@ Currently this project is in use for a few side projects, but is not in heavy pr
 To use Deployster, you'll need:
 
 * **CoreOS cluster** - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
-* **Images hosted on the public Docker Hub Registry** - They [can be private][registry-authentication], but for now they must come from the same user on the public Docker Hub Registry.  There's a todo item below to make this better.
 * **HTTP service exposed on port 3000 of container** - This should be configurable in the future too.
 * **Stateless containers** - Linking in volumes is currently not supported.  Again, something for the future.
 * **Vulcand running** - For [zero downtime deploys][zero-downtime] of new versions of services.
@@ -107,12 +107,17 @@ After the above requirements are fulfilled, you can launch Deployster with Fleet
 $ deployster -h
 Usage of deployster:
   -cert="": Path to certificate to be used for serving HTTPS
-  -docker-hub-username="": The username of the Docker Hub account that all deployable images are hosted under
+  -docker-hub-username="deployster": The username of the Docker Hub account that all deployable images are hosted under
   -key="": Path to private key to bse used for serving HTTPS
   -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
   -password="mmmhm": Password that will be used to authenticate with Deployster via HTTP basic auth
+  -registry-url="": If using a private registry, this is the address:port of that registry (if supplied, docker-hub-username will be ignored)
   -username="deployster": Username that will be used to authenticate with Deployster via HTTP basic auth
 ```
+
+### Notes
+
+* For authenticating with the public Docker Hub Registry, follow [this CoreOS guide][registry-authentication].
 
 
 ### Contributing
@@ -130,8 +135,8 @@ Code and documentation copyright 2015 Brian Morton. Code released under the MIT 
 [running-rails-migrations]: http://guides.rubyonrails.org/active_record_migrations.html#running-migrations
 [digitalocean]: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-coreos-cluster-on-digitalocean
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
-[registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
 [zero-downtime]: https://coreos.com/blog/zero-downtime-frontend-deploys-vulcand/
 [etcd]: https://github.com/coreos/etcd
 [consul]: https://www.consul.io
 [confd]: https://github.com/kelseyhightower/confd
+[registry-authentication]: https://coreos.com/docs/launching-containers/building/registry-authentication/
