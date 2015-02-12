@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&username, "username", "deployster", "Username that will be used to authenticate with Deployster via HTTP basic auth")
 	flag.StringVar(&password, "password", "mmmhm", "Password that will be used to authenticate with Deployster via HTTP basic auth")
 	flag.StringVar(&certPath, "cert", "", "Path to certificate to be used for serving HTTPS")
-	flag.StringVar(&keyPath, "key", "", "Path to private key to bse used for serving HTTPS")
+	flag.StringVar(&keyPath, "key", "", "Path to private key to be used for serving HTTPS")
 	flag.Parse()
 }
 

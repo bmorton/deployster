@@ -108,7 +108,7 @@ $ deployster -h
 Usage of deployster:
   -cert="": Path to certificate to be used for serving HTTPS
   -docker-hub-username="deployster": The username of the Docker Hub account that all deployable images are hosted under
-  -key="": Path to private key to bse used for serving HTTPS
+  -key="": Path to private key to be used for serving HTTPS
   -listen="0.0.0.0:3000": Specifies the IP and port that the HTTP server will listen on
   -password="mmmhm": Password that will be used to authenticate with Deployster via HTTP basic auth
   -registry-url="": If using a private registry, this is the address:port of that registry (if supplied, docker-hub-username will be ignored)
