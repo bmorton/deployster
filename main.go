@@ -16,6 +16,7 @@ var AppVersion string
 // Options that are configurable from flags
 var listen string
 var dockerHubUsername string
+var registryURL string
 var username string
 var password string
 var certPath string
@@ -23,7 +24,8 @@ var keyPath string
 
 func init() {
 	flag.StringVar(&listen, "listen", "0.0.0.0:3000", "Specifies the IP and port that the HTTP server will listen on")
-	flag.StringVar(&dockerHubUsername, "docker-hub-username", "", "The username of the Docker Hub account that all deployable images are hosted under")
+	flag.StringVar(&dockerHubUsername, "docker-hub-username", "deployster", "The username of the Docker Hub account that all deployable images are hosted under")
+	flag.StringVar(&registryURL, "registry-url", "", "If using a private registry, this is the address:port of that registry (if supplied, docker-hub-username will be ignored)")
 	flag.StringVar(&username, "username", "deployster", "Username that will be used to authenticate with Deployster via HTTP basic auth")
 	flag.StringVar(&password, "password", "mmmhm", "Password that will be used to authenticate with Deployster via HTTP basic auth")
 	flag.StringVar(&certPath, "cert", "", "Path to certificate to be used for serving HTTPS")
@@ -32,8 +34,15 @@ func init() {
 }
 
 func main() {
-	log.Printf("Starting deployster on %s...\n", listen)
-	service := server.NewDeploysterService(listen, AppVersion, username, password, dockerHubUsername)
+	var imagePrefix string
+	if registryURL != "" {
+		log.Printf("Starting deployster on %s using private registry at %s...\n", listen, registryURL)
+		imagePrefix = registryURL
+	} else {
+		log.Printf("Starting deployster on %s using the public Docker Hub registry with user %s...\n", listen, dockerHubUsername)
+		imagePrefix = dockerHubUsername
+	}
+	service := server.NewDeploysterService(listen, AppVersion, username, password, imagePrefix)
 
 	go func() {
 		var err error
