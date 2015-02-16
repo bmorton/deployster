@@ -1,8 +1,6 @@
 package server
 
 import (
-	"strings"
-
 	"github.com/bmorton/deployster/fleet"
 )
 
@@ -14,8 +12,6 @@ type VersionedUnit struct {
 	DesiredState string `json:"desired_state"`
 	MachineID    string `json:"machine_id"`
 }
-
-type ExtractableUnit fleet.Unit
 
 func FindServiceUnits(serviceName string, units []fleet.Unit) []VersionedUnit {
 	versionedUnits := []VersionedUnit{}
@@ -54,21 +50,4 @@ func FindServiceVersions(serviceName string, units []fleet.Unit) []string {
 	}
 
 	return versions
-}
-
-func (eu *ExtractableUnit) ExtractBaseName() string {
-	s := strings.Split(eu.Name, "-")
-	return s[0]
-}
-
-func (eu *ExtractableUnit) ExtractVersion() string {
-	s := strings.Split(eu.Name, "-")
-	end := strings.Index(s[1], "@")
-	return s[1][:end]
-}
-
-func (eu *ExtractableUnit) ExtractInstance() string {
-	s := strings.Split(eu.Name, "@")
-	end := strings.Index(s[1], ".")
-	return s[1][:end]
 }
