@@ -1,10 +1,10 @@
 package server
 
 import (
-	"github.com/bmorton/deployster/support"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -18,35 +18,35 @@ func (suite *DeploysterServiceTestSuite) SetupSuite() {
 }
 
 func (suite *DeploysterServiceTestSuite) TestGetVersionRequiresAuthentication() {
-	w := &support.TestResponseWriter{}
+	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", "http://example.com/v1/version", nil)
 	suite.Subject.RootMux.ServeHTTP(w, r)
 
-	assert.Equal(suite.T(), http.StatusUnauthorized, w.StatusCode)
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
 }
 
 func (suite *DeploysterServiceTestSuite) TestPostDeploysRequiresAuthentication() {
-	w := &support.TestResponseWriter{}
+	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", "http://example.com/v1/services/test/deploys", nil)
 	suite.Subject.RootMux.ServeHTTP(w, r)
 
-	assert.Equal(suite.T(), http.StatusUnauthorized, w.StatusCode)
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
 }
 
 func (suite *DeploysterServiceTestSuite) TestDeleteDeploysRequiresAuthentication() {
-	w := &support.TestResponseWriter{}
+	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("DELETE", "http://example.com/v1/services/test/deploys/abc123", nil)
 	suite.Subject.RootMux.ServeHTTP(w, r)
 
-	assert.Equal(suite.T(), http.StatusUnauthorized, w.StatusCode)
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
 }
 
 func (suite *DeploysterServiceTestSuite) TestGetUnitsRequiresAuthentication() {
-	w := &support.TestResponseWriter{}
+	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", "http://example.com/v1/services/test/units", nil)
 	suite.Subject.RootMux.ServeHTTP(w, r)
 
-	assert.Equal(suite.T(), http.StatusUnauthorized, w.StatusCode)
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
 }
 
 func TestDeploysterServiceTestSuite(t *testing.T) {
