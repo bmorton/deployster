@@ -1,5 +1,13 @@
 package server
 
+// dockerUnitTemplate is the only currently supported Fleet unit file for
+// launching new units.  It makes lots of assumptions about how the service is
+// configured and stored.  These assumptions are essentially the conventions
+// that power deployster and are described in more detail in the README.
+//
+// Additionally, we only store this unit template to make it easy to read and
+// update.  We always convert this unit file to an array of fleet.UnitOption
+// structs before sending it off to the Fleet client.
 const dockerUnitTemplate = `
 [Unit]
 Description={{.Name}}
