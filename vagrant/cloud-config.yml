@@ -1,0 +1,57 @@
+#cloud-config
+
+coreos:
+  etcd:
+    addr: $public_ipv4:4001
+    peer-addr: $public_ipv4:7001
+  fleet:
+    public-ip: $public_ipv4
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: docker-tcp.socket
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Docker Socket for the API
+
+        [Socket]
+        ListenStream=2375
+        Service=docker.service
+        BindIPv6Only=both
+
+        [Install]
+        WantedBy=sockets.target
+    - name: vulcand.service
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Vulcan
+        After=docker.service
+
+        [Service]
+        TimeoutStartSec=0
+        ExecStartPre=/usr/bin/docker pull mailgun/vulcand:v0.7.0
+        ExecStartPre=-/usr/bin/docker rm -f vulcand
+        ExecStart=/usr/bin/docker run --rm --name vulcand -p 80:80 -p 8182:8182 mailgun/vulcand:latest vulcand -apiInterface=0.0.0.0 -interface=0.0.0.0 -etcd=http://10.1.42.1:4001 -port=80 -apiPort=8182
+        ExecStop=/usr/bin/docker kill vulcand
+    - name: deployster.service
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Deployster
+        After=docker.service
+
+        [Service]
+        EnvironmentFile=/etc/environment
+        User=core
+        TimeoutStartSec=0
+        ExecStartPre=/usr/bin/docker pull bmorton/deployster:latest
+        ExecStartPre=-/usr/bin/docker rm -f deployster
+        ExecStart=/usr/bin/docker run --name deployster -p 3000:3000 -v /var/run/fleet.sock:/var/run/fleet.sock bmorton/deployster:latest -docker-hub-username=mmmhm
+        ExecStop=/usr/bin/docker kill deployster
