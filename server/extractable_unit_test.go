@@ -25,6 +25,11 @@ func (suite *ExtractableUnitTestSuite) TestExtractsVersion() {
 	assert.Equal(suite.T(), "efe1abc", subject.ExtractVersion())
 }
 
+func (suite *ExtractableUnitTestSuite) TestExtractsVersionWithHyphenatedName() {
+	subject := ExtractableUnit{Name: "hellow-world-efe1abc@1.service"}
+	assert.Equal(suite.T(), "efe1abc", subject.ExtractVersion())
+}
+
 func (suite *ExtractableUnitTestSuite) TestExtractsInstance() {
 	subject := ExtractableUnit{Name: "railsapp-efe1abc@1.service"}
 	assert.Equal(suite.T(), "1", subject.ExtractInstance())
