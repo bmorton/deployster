@@ -32,21 +32,36 @@ type DeploysResource struct {
 	ImagePrefix string
 }
 
+// DeployRequest is the wrapper struct used to deserialize the JSON payload that
+// is sent for creating a new deploy.
 type DeployRequest struct {
 	Deploy Deploy `json:"deploy"`
 }
 
+// Deploy is the struct that defines all the options for creating a new deploy
+// and is wrapped by DeployRequest and deserialized in the Create function.
 type Deploy struct {
 	Version         string `json:"version"`
 	DestroyPrevious bool   `json:"destroy_previous"`
 }
 
+// UnitTemplate is the view model that is passed to the template parser that
+// renders a unit file.
 type UnitTemplate struct {
 	Name        string
 	Version     string
 	ImagePrefix string
 }
 
+// Create is the POST endpoint for kicking off a new deployment of the service
+// and version provided.  It uses these parameters to spin up tasks that will
+// asyncronously start new units via Fleet and optionally wait for units to
+// complete launching so that it can destroy old versions of the service that
+// are no longer desired.
+//
+// This function assumes that it is nested inside `/services/{name}`
+// and that Tigertonic is extracting the service name and providing it via query
+// params.
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
@@ -76,6 +91,12 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 	return http.StatusCreated, nil, nil, nil
 }
 
+// Destroy is the DELETE endpoint for destroying the units associated with
+// the service name and version provided.
+//
+// This function assumes that it is nested inside
+// `/services/{name}/versions/{version}` and that Tigertonic is extracting the
+// service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
 	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
 
@@ -87,6 +108,8 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 	return http.StatusNoContent, nil, nil, nil
 }
 
+// getUnitOptions renders the unit file and converts it to an array of
+// UnitOption structs.
 func getUnitOptions(name string, version string, imagePrefix string) []fleet.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
@@ -97,6 +120,8 @@ func getUnitOptions(name string, version string, imagePrefix string) []fleet.Uni
 	return schemaToLocalUnit(schema.MapUnitFileToSchemaUnitOptions(unitFile))
 }
 
+// schemaToLocalUnit converts an array of the schema package's UnitOption
+// structs to the fleet package's UnitOption structs.
 func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
 	convertedOptions := []fleet.UnitOption{}
 	for _, o := range options {
@@ -109,10 +134,16 @@ func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
 	return convertedOptions
 }
 
+// fleetServiceName generates a fleet unit name with the service name, version,
+// and instance encoded within it.
 func fleetServiceName(name string, version string) string {
 	return fmt.Sprintf("%s-%s@1.service", name, version)
 }
 
+// destroyPrevious is responsible for watching for a new version of a service to
+// complete launching on the `destroyPreviousCheckDelay` interval so that it can
+// fire off a request to destroy the previous version.  If this doesn't complete
+// before the destroyPreviousCheckTimeout, the attempt will be abandoned.
 func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string) {
 	timeoutChan := make(chan bool, 1)
 
