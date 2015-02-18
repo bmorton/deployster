@@ -15,6 +15,11 @@ func (suite *ExtractableUnitTestSuite) TestExtractsBaseName() {
 	assert.Equal(suite.T(), "railsapp", subject.ExtractBaseName())
 }
 
+func (suite *ExtractableUnitTestSuite) TestExtractsBaseNameSupportsNamesWithHyphens() {
+	subject := ExtractableUnit{Name: "hello-world-efe1abc@1.service"}
+	assert.Equal(suite.T(), "hello-world", subject.ExtractBaseName())
+}
+
 func (suite *ExtractableUnitTestSuite) TestExtractsVersion() {
 	subject := ExtractableUnit{Name: "railsapp-efe1abc@1.service"}
 	assert.Equal(suite.T(), "efe1abc", subject.ExtractVersion())
