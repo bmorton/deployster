@@ -1,3 +1,10 @@
+## v0.3.0 (unreleased)
+
+Fixes:
+  * Removed homegrown Fleet client and replaced with official CoreOS client ([#29][issue-29])
+  * Fixed bug with ignore Fleet responses with multiple pages
+
+
 ## v0.2.0
 
 Features:
@@ -23,7 +30,9 @@ Features:
   * List all units associated to a service
   * HTTP basic authentication for all endpoints
 
+
 [issue-14]: https://github.com/bmorton/deployster/pull/14
 [issue-20]: https://github.com/bmorton/deployster/pull/20
 [issue-17]: https://github.com/bmorton/deployster/pull/17
 [issue-27]: https://github.com/bmorton/deployster/pull/27
+[issue-29]: https://github.com/bmorton/deployster/pull/29
