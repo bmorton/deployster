@@ -78,7 +78,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			log.Printf("Can't destroy previous versions (%d previous versions), disabling destroy.", len(versions))
 			req.Deploy.DestroyPrevious = false
 		} else {
-			go dr.destroyPrevious(serviceName, versions[0], req.Deploy.Version)
+			go dr.destroyPrevious(serviceName, versions[0], req.Deploy.Version, destroyPreviousCheckDelay)
 		}
 	}
 
@@ -134,7 +134,7 @@ func fleetServiceName(name string, version string) string {
 // complete launching on the `destroyPreviousCheckDelay` interval so that it can
 // fire off a request to destroy the previous version.  If this doesn't complete
 // before the destroyPreviousCheckTimeout, the attempt will be abandoned.
-func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string) {
+func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string, checkDelay time.Duration) {
 	timeoutChan := make(chan bool, 1)
 
 	go func() {
@@ -146,7 +146,7 @@ func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, 
 	previousFleetUnit := fleetServiceName(name, previousVersion)
 
 	for {
-		startCheck := time.After(destroyPreviousCheckDelay)
+		startCheck := time.After(checkDelay)
 
 		select {
 		case <-startCheck:
