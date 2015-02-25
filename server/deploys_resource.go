@@ -82,7 +82,12 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		}
 	}
 
-	err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetName, DesiredState: "launched", Options: options})
+	err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetName, Options: options})
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
+	}
+
+	err = dr.Fleet.SetUnitTargetState(fleetName, "launched")
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
