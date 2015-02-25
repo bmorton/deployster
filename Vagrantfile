@@ -44,6 +44,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
   config.vm.network :private_network, ip: "172.17.8.100"
 
+  config.vm.synced_folder ".", "/home/core/share", id: "core", nfs: true, mount_options: ['nolock,vers=3,udp']
+
   config.vm.provision :file,  source: "vagrant/cloud-config.yml", destination: "/tmp/vagrantfile-user-data"
   config.vm.provision :shell, inline: "docker pull mailgun/vulcand:v0.7.0"
   config.vm.provision :shell, inline: "docker pull bmorton/deployster:latest"
