@@ -64,7 +64,7 @@ type UnitTemplate struct {
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
-	fleetName := fleetServiceName(serviceName, req.Deploy.Version)
+	fleetName := fleetServiceName(serviceName, req.Deploy.Version, "1")
 
 	if req.Deploy.DestroyPrevious {
 		units, err := dr.Fleet.Units()
@@ -72,13 +72,14 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			log.Printf("%#v\n", err)
 			return http.StatusInternalServerError, nil, nil, err
 		}
-		versions := FindServiceVersions(u.Query().Get("name"), units)
+		previousUnits := FindServiceUnits(serviceName, units)
 
-		if len(versions) != 1 {
-			log.Printf("Can't destroy previous versions (%d previous versions), disabling destroy.", len(versions))
-			req.Deploy.DestroyPrevious = false
-		} else {
-			go dr.destroyPrevious(serviceName, versions[0], req.Deploy.Version, destroyPreviousCheckDelay)
+		for _, unit := range previousUnits {
+			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Instance)
+			if unit.Version != req.Deploy.Version {
+				log.Printf("Launching watcher for %s.\n", rangeFleetName)
+				go dr.destroyPrevious(serviceName, unit.Version, req.Deploy.Version, unit.Instance, destroyPreviousCheckDelay)
+			}
 		}
 	}
 
@@ -102,7 +103,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
 // service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
-	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
+	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"), "1")
 
 	err := dr.Fleet.DestroyUnit(fleetName)
 	if err != nil {
@@ -126,15 +127,15 @@ func getUnitOptions(name string, version string, imagePrefix string) []*schema.U
 
 // fleetServiceName generates a fleet unit name with the service name, version,
 // and instance encoded within it.
-func fleetServiceName(name string, version string) string {
-	return fmt.Sprintf("%s-%s@1.service", name, version)
+func fleetServiceName(name string, version string, instance string) string {
+	return fmt.Sprintf("%s-%s@%s.service", name, version, instance)
 }
 
 // destroyPrevious is responsible for watching for a new version of a service to
 // complete launching on the `destroyPreviousCheckDelay` interval so that it can
 // fire off a request to destroy the previous version.  If this doesn't complete
 // before the destroyPreviousCheckTimeout, the attempt will be abandoned.
-func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string, checkDelay time.Duration) {
+func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string, instance string, checkDelay time.Duration) {
 	timeoutChan := make(chan bool, 1)
 
 	go func() {
@@ -142,8 +143,8 @@ func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, 
 		timeoutChan <- true
 	}()
 
-	currentFleetUnit := fleetServiceName(name, currentVersion)
-	previousFleetUnit := fleetServiceName(name, previousVersion)
+	currentFleetUnit := fleetServiceName(name, currentVersion, instance)
+	previousFleetUnit := fleetServiceName(name, previousVersion, instance)
 
 	for {
 		startCheck := time.After(checkDelay)
@@ -164,6 +165,10 @@ func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, 
 						if err != nil {
 							log.Printf("%#v\n", err)
 						}
+						return
+					}
+					if state.SystemdSubState == "failed" {
+						log.Printf("%s failed to launch, bailing out.\n", currentFleetUnit)
 						return
 					}
 					log.Printf("%s isn't running (currently %s).  Trying again in %s.\n", currentFleetUnit, state.SystemdSubState, destroyPreviousCheckDelay)

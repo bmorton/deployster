@@ -68,7 +68,7 @@ func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
 	suite.FleetClientMock.On("UnitStates").Return(mockedStates, nil)
 	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(nil)
 
-	suite.Subject.destroyPrevious("carousel", "cccddd", "abc123", 0)
+	suite.Subject.destroyPrevious("carousel", "cccddd", "abc123", "1", 0)
 
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
