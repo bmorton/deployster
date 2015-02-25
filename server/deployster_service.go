@@ -88,14 +88,15 @@ func (ds *DeploysterService) authenticated(h http.Handler) tigertonic.FirstHandl
 }
 
 func getFleetHTTPClient() (client.API, error) {
-	ep, _ := url.Parse("unix:///var/run/fleet.sock")
-	sockPath := ep.Path
-	ep.Path = ""
-	dialFunc := func(string, string) (net.Conn, error) {
-		return net.Dial("unix", sockPath)
+	fakeURL := &url.URL{
+		Scheme: "http",
+		Path:   "",
+		Host:   "domain-sock",
 	}
-	ep.Scheme = "http"
-	ep.Host = "domain-sock"
+
+	dialFunc := func(string, string) (net.Conn, error) {
+		return net.Dial("unix", "/var/run/fleet.sock")
+	}
 
 	trans := http.Transport{
 		Dial: dialFunc,
@@ -105,5 +106,5 @@ func getFleetHTTPClient() (client.API, error) {
 		Transport: &trans,
 	}
 
-	return client.NewHTTPClient(&hc, *ep)
+	return client.NewHTTPClient(&hc, *fakeURL)
 }
