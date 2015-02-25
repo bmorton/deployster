@@ -1,20 +1,19 @@
 package server
 
 import (
-	"github.com/bmorton/deployster/fleet"
-	"github.com/bmorton/deployster/fleet/mocks"
+	"testing"
+
+	"github.com/bmorton/deployster/server/mocks"
+	"github.com/coreos/fleet/schema"
 	"github.com/rcrowley/go-tigertonic/mocking"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"net/http"
-	"testing"
 )
 
 type DeploysResourceTestSuite struct {
 	suite.Suite
 	Subject         DeploysResource
-	FleetClientMock *mocks.Client
+	FleetClientMock *mocks.FleetClient
 	Service         *DeploysterService
 }
 
@@ -23,12 +22,13 @@ func (suite *DeploysResourceTestSuite) SetupSuite() {
 }
 
 func (suite *DeploysResourceTestSuite) SetupTest() {
-	suite.FleetClientMock = new(mocks.Client)
+	suite.FleetClientMock = new(mocks.FleetClient)
 	suite.Subject = DeploysResource{suite.FleetClientMock, "mmmhm"}
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
-	suite.FleetClientMock.On("StartUnit", "carousel-abc123@1.service", mock.AnythingOfType("[]fleet.UnitOption")).Return(&http.Response{}, nil)
+	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel-abc123@1.service", DesiredState: "launched", Options: expectedOptions}).Return(nil)
 
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
@@ -43,8 +43,9 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviousVersions() {
-	suite.FleetClientMock.On("Units").Return([]fleet.Unit{}, nil)
-	suite.FleetClientMock.On("StartUnit", "carousel-abc123@1.service", mock.AnythingOfType("[]fleet.UnitOption")).Return(&http.Response{}, nil)
+	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel-abc123@1.service", DesiredState: "launched", Options: expectedOptions}).Return(nil)
 
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
@@ -59,8 +60,11 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviou
 }
 
 func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
-	suite.FleetClientMock.On("UnitState", "carousel-abc123@1.service").Return(fleet.UnitState{"", "", "", "", "", "running"}, nil)
-	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(&http.Response{}, nil)
+	mockedStates := []*schema.UnitState{
+		&schema.UnitState{"", "", "carousel-abc123@1.service", "", "", "running"},
+	}
+	suite.FleetClientMock.On("UnitStates").Return(mockedStates, nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(nil)
 
 	suite.Subject.destroyPrevious("carousel", "cccddd", "abc123")
 
@@ -68,7 +72,7 @@ func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
 }
 
 func (suite *DeploysResourceTestSuite) TestDestroy() {
-	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(&http.Response{}, nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(nil)
 
 	code, _, response, err := suite.Subject.Destroy(
 		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/cccddd"),

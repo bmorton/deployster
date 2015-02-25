@@ -9,7 +9,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/coreos/fleet/client"
 	"github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
 )
@@ -28,7 +27,7 @@ const (
 // DeploysResource is the HTTP resource responsible for creating and destroying
 // deployments of services.
 type DeploysResource struct {
-	Fleet       client.API
+	Fleet       FleetClient
 	ImagePrefix string
 }
 
