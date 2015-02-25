@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bmorton/deployster/fleet"
+	"github.com/coreos/fleet/client"
 )
 
 // UnitsResource is the HTTP resource responsible for getting basic information
 // on all units that exist for a given service.
 type UnitsResource struct {
-	Fleet fleet.Client
+	Fleet client.API
 }
 
 // UnitsResponse is the wrapper struct for the JSON payload returned by the

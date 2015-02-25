@@ -3,13 +3,13 @@ package server
 import (
 	"strings"
 
-	"github.com/bmorton/deployster/fleet"
+	"github.com/coreos/fleet/schema"
 )
 
 // ExtractableUnit is the local struct for a fleet.Unit with added functions
 // for extracting the name, version, and instance that deployster encodes into
 // the Fleet unit name.
-type ExtractableUnit fleet.Unit
+type ExtractableUnit schema.Unit
 
 // ExtractBaseName returns the name of the service from the Fleet unit name.
 // Given "railsapp-cf2e8ac@1.service" this returns "railsapp"

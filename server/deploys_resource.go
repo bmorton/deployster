@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/bmorton/deployster/fleet"
+	"github.com/coreos/fleet/client"
 	"github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
 )
@@ -28,7 +28,7 @@ const (
 // DeploysResource is the HTTP resource responsible for creating and destroying
 // deployments of services.
 type DeploysResource struct {
-	Fleet       fleet.Client
+	Fleet       client.API
 	ImagePrefix string
 }
 
@@ -83,7 +83,12 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		}
 	}
 
-	_, err := dr.Fleet.StartUnit(fleetName, options)
+	unit := schema.Unit{
+		Name:         fleetName,
+		DesiredState: "launched",
+		Options:      options,
+	}
+	err := dr.Fleet.CreateUnit(&unit)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -100,7 +105,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
 	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"))
 
-	_, err := dr.Fleet.DestroyUnit(fleetName)
+	err := dr.Fleet.DestroyUnit(fleetName)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -110,28 +115,14 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 
 // getUnitOptions renders the unit file and converts it to an array of
 // UnitOption structs.
-func getUnitOptions(name string, version string, imagePrefix string) []fleet.UnitOption {
+func getUnitOptions(name string, version string, imagePrefix string) []*schema.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
 	t.Execute(&unitTemplate, UnitTemplate{name, version, imagePrefix})
 
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 
-	return schemaToLocalUnit(schema.MapUnitFileToSchemaUnitOptions(unitFile))
-}
-
-// schemaToLocalUnit converts an array of the schema package's UnitOption
-// structs to the fleet package's UnitOption structs.
-func schemaToLocalUnit(options []*schema.UnitOption) []fleet.UnitOption {
-	convertedOptions := []fleet.UnitOption{}
-	for _, o := range options {
-		convertedOptions = append(convertedOptions, fleet.UnitOption{
-			Section: o.Section,
-			Name:    o.Name,
-			Value:   o.Value,
-		})
-	}
-	return convertedOptions
+	return schema.MapUnitFileToSchemaUnitOptions(unitFile)
 }
 
 // fleetServiceName generates a fleet unit name with the service name, version,
@@ -152,28 +143,35 @@ func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, 
 		timeoutChan <- true
 	}()
 
+	currentFleetUnit := fleetServiceName(name, currentVersion)
+	previousFleetUnit := fleetServiceName(name, previousVersion)
+
 	for {
 		startCheck := time.After(destroyPreviousCheckDelay)
 
 		select {
 		case <-startCheck:
-			log.Printf("Checking if %s:%s has finished launching...\n", name, currentVersion)
-			state, err := dr.Fleet.UnitState(fleetServiceName(name, currentVersion))
+			log.Printf("Checking if %s has finished launching...\n", currentFleetUnit)
+			states, err := dr.Fleet.UnitStates()
 			if err != nil {
 				log.Println(err)
 				break
 			}
-			if state.SubState == "running" {
-				log.Printf("%s:%s has launched, destroying %s.\n", name, currentVersion, previousVersion)
-				_, err := dr.Fleet.DestroyUnit(fleetServiceName(name, previousVersion))
-				if err != nil {
-					log.Printf("%#v\n", err)
+			for _, state := range states {
+				if state.Name == currentFleetUnit {
+					if state.SystemdSubState == "running" {
+						log.Printf("%s has launched, destroying %s.\n", currentFleetUnit, previousFleetUnit)
+						err := dr.Fleet.DestroyUnit(previousFleetUnit)
+						if err != nil {
+							log.Printf("%#v\n", err)
+						}
+						return
+					}
+					log.Printf("%s isn't running (currently %s).  Trying again in %s.\n", currentFleetUnit, state.SystemdSubState, destroyPreviousCheckDelay)
 				}
-				return
 			}
-			log.Printf("%s:%s isn't running (currently %s).  Trying again in %s.\n", name, currentVersion, state.SubState, destroyPreviousCheckDelay)
 		case <-timeoutChan:
-			log.Printf("Timed out trying to destroy %s:%s after %s.\n", name, previousVersion, destroyPreviousCheckTimeout)
+			log.Printf("Timed out trying to destroy %s after %s.\n", previousFleetUnit, destroyPreviousCheckTimeout)
 			return
 		}
 	}

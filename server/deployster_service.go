@@ -1,9 +1,11 @@
 package server
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 
-	"github.com/bmorton/deployster/fleet"
+	"github.com/coreos/fleet/client"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rcrowley/go-tigertonic"
 )
@@ -48,10 +50,11 @@ func NewDeploysterService(listen string, version string, username string, passwo
 // ConfigureRoutes sets up resources and their dependencies so that we can
 // configure all the HTTP routes that will be supported by the server.
 func (ds *DeploysterService) ConfigureRoutes() {
-	fleetClient := fleet.NewClient("/var/run/fleet.sock")
+	fleetClient, _ := getFleetHTTPClient()
+
 	dockerClient, _ := docker.NewClient("unix:///var/run/docker.sock")
-	deploys := DeploysResource{&fleetClient, ds.ImagePrefix}
-	units := UnitsResource{&fleetClient}
+	deploys := DeploysResource{fleetClient, ds.ImagePrefix}
+	units := UnitsResource{fleetClient}
 	tasks := TasksResource{dockerClient, ds.ImagePrefix}
 
 	ds.Mux.Handle("GET", "/version", ds.authenticated(tigertonic.Version(ds.AppVersion)))
@@ -82,4 +85,25 @@ func (ds *DeploysterService) authenticated(h http.Handler) tigertonic.FirstHandl
 		map[string]string{ds.Username: ds.Password},
 		"Deployster",
 		h)
+}
+
+func getFleetHTTPClient() (client.API, error) {
+	ep, _ := url.Parse("unix:///var/run/fleet.sock")
+	sockPath := ep.Path
+	ep.Path = ""
+	dialFunc := func(string, string) (net.Conn, error) {
+		return net.Dial("unix", sockPath)
+	}
+	ep.Scheme = "http"
+	ep.Host = "domain-sock"
+
+	trans := http.Transport{
+		Dial: dialFunc,
+	}
+
+	hc := http.Client{
+		Transport: &trans,
+	}
+
+	return client.NewHTTPClient(&hc, *ep)
 }
