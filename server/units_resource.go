@@ -4,14 +4,12 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-
-	"github.com/bmorton/deployster/fleet"
 )
 
 // UnitsResource is the HTTP resource responsible for getting basic information
 // on all units that exist for a given service.
 type UnitsResource struct {
-	Fleet fleet.Client
+	Fleet FleetClient
 }
 
 // UnitsResponse is the wrapper struct for the JSON payload returned by the

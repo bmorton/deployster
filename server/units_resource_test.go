@@ -1,18 +1,19 @@
 package server
 
 import (
-	"github.com/bmorton/deployster/fleet"
-	"github.com/bmorton/deployster/fleet/mocks"
+	"testing"
+
+	"github.com/bmorton/deployster/server/mocks"
+	"github.com/coreos/fleet/schema"
 	"github.com/rcrowley/go-tigertonic/mocking"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type UnitsResourceTestSuite struct {
 	suite.Suite
 	Subject         UnitsResource
-	FleetClientMock *mocks.Client
+	FleetClientMock *mocks.FleetClient
 	Service         *DeploysterService
 }
 
@@ -21,12 +22,12 @@ func (suite *UnitsResourceTestSuite) SetupSuite() {
 }
 
 func (suite *UnitsResourceTestSuite) SetupTest() {
-	suite.FleetClientMock = new(mocks.Client)
+	suite.FleetClientMock = new(mocks.FleetClient)
 	suite.Subject = UnitsResource{suite.FleetClientMock}
 }
 
 func (suite *UnitsResourceTestSuite) TestIndexWithNoResults() {
-	suite.FleetClientMock.On("Units").Return([]fleet.Unit{}, nil)
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
 
 	code, _, response, err := suite.Subject.Index(
 		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),
@@ -41,7 +42,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoResults() {
 }
 
 func (suite *UnitsResourceTestSuite) TestIndexWithNoMatchingResultsForService() {
-	suite.FleetClientMock.On("Units").Return([]fleet.Unit{fleet.Unit{"running", "running", "abc123", "differentapp-efefeff@1.service", []fleet.UnitOption{}}}, nil)
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "differentapp-efefeff@1.service", []*schema.UnitOption{}}}, nil)
 
 	code, _, response, err := suite.Subject.Index(
 		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),
@@ -56,7 +57,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoMatchingResultsForService() 
 }
 
 func (suite *UnitsResourceTestSuite) TestIndexWithMatchingResultsForService() {
-	suite.FleetClientMock.On("Units").Return([]fleet.Unit{fleet.Unit{"running", "running", "abc123", "carousel-efefeff@1.service", []fleet.UnitOption{}}}, nil)
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "carousel-efefeff@1.service", []*schema.UnitOption{}}}, nil)
 
 	code, _, response, err := suite.Subject.Index(
 		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),

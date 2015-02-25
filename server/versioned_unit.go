@@ -1,8 +1,6 @@
 package server
 
-import (
-	"github.com/bmorton/deployster/fleet"
-)
+import "github.com/coreos/fleet/schema"
 
 // VersionedUnit is our representation of a Fleet unit.  Largely, the difference
 // is that Fleet units don't care about versioning, so this lets us bridge the
@@ -22,11 +20,12 @@ type VersionedUnit struct {
 // Fleet unit name.  It collects all those units and returns an array of
 // VersionedUnit structs that have had their additional deployster-specific
 // fields populated from the Fleet unit name.
-func FindServiceUnits(serviceName string, units []fleet.Unit) []VersionedUnit {
+func FindServiceUnits(serviceName string, units []*schema.Unit) []VersionedUnit {
 	versionedUnits := []VersionedUnit{}
 
 	for _, u := range units {
-		extractable := ExtractableUnit(u)
+		dereferencedUnit := *u
+		extractable := ExtractableUnit(dereferencedUnit)
 		if extractable.ExtractBaseName() == serviceName {
 			i := VersionedUnit{
 				Service:      serviceName,
@@ -47,11 +46,12 @@ func FindServiceUnits(serviceName string, units []fleet.Unit) []VersionedUnit {
 // all the versions present for the given service.  This doesn't currently look
 // at the state of the units, it simply looks for matching service names and
 // returns an array of all the unique versions found.
-func FindServiceVersions(serviceName string, units []fleet.Unit) []string {
+func FindServiceVersions(serviceName string, units []*schema.Unit) []string {
 	uniqueVersions := make(map[string]bool)
 
 	for _, u := range units {
-		extractable := ExtractableUnit(u)
+		dereferencedUnit := *u
+		extractable := ExtractableUnit(dereferencedUnit)
 		if extractable.ExtractBaseName() == serviceName {
 			uniqueVersions[extractable.ExtractVersion()] = true
 		}

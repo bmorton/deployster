@@ -20,16 +20,6 @@ type TasksResource struct {
 	ImagePrefix string
 }
 
-// DockerClient is the interface required for TasksResource to be able to
-// create, start, attach, inspect, and remove Docker containers.
-type DockerClient interface {
-	CreateContainer(docker.CreateContainerOptions) (*docker.Container, error)
-	StartContainer(string, *docker.HostConfig) error
-	AttachToContainer(docker.AttachToContainerOptions) error
-	InspectContainer(string) (*docker.Container, error)
-	RemoveContainer(docker.RemoveContainerOptions) error
-}
-
 // TaskRequest is the top-level wrapper for the Task in the JSON payload sent by
 // the client.
 type TaskRequest struct {
