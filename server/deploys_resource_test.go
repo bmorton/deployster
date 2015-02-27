@@ -28,13 +28,13 @@ func (suite *DeploysResourceTestSuite) SetupTest() {
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
-	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel-abc123@1.service", Options: expectedOptions}).Return(nil)
-	suite.FleetClientMock.On("SetUnitTargetState", "carousel-abc123@1.service", "launched").Return(nil)
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123_2013-06-05T14:10:43Z@1.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123_2013-06-05T14:10:43Z@1.service", "launched").Return(nil)
 
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", false}},
+		&DeployRequest{Deploy{"abc123", false, "2013-06-05T14:10:43Z"}},
 	)
 
 	assert.Nil(suite.T(), err)
@@ -46,13 +46,13 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviousVersions() {
 	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
-	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel-abc123@1.service", Options: expectedOptions}).Return(nil)
-	suite.FleetClientMock.On("SetUnitTargetState", "carousel-abc123@1.service", "launched").Return(nil)
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123_2013-06-05T14:10:43Z@1.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123_2013-06-05T14:10:43Z@1.service", "launched").Return(nil)
 
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", true}},
+		&DeployRequest{Deploy{"abc123", true, "2013-06-05T14:10:43Z"}},
 	)
 
 	assert.Nil(suite.T(), err)
@@ -63,23 +63,23 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviou
 
 func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
 	mockedStates := []*schema.UnitState{
-		&schema.UnitState{"", "", "carousel-abc123@1.service", "", "", "running"},
+		&schema.UnitState{"", "", "carousel:cccddd_2013-06-05T14:10:43Z@1.service", "", "", "running"},
 	}
 	suite.FleetClientMock.On("UnitStates").Return(mockedStates, nil)
-	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:abc123_2013-06-05T14:10:43Z@1.service").Return(nil)
 
-	suite.Subject.destroyPrevious("carousel", "cccddd", "abc123", "1", 0)
+	suite.Subject.destroyPrevious("carousel:abc123_2013-06-05T14:10:43Z@1.service", "carousel:cccddd_2013-06-05T14:10:43Z@1.service", 0)
 
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
 func (suite *DeploysResourceTestSuite) TestDestroy() {
-	suite.FleetClientMock.On("DestroyUnit", "carousel-cccddd@1.service").Return(nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:cccddd_@1.service").Return(nil)
 
 	code, _, response, err := suite.Subject.Destroy(
 		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/cccddd"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", false}},
+		&DeployRequest{Deploy{"abc123", false, "2013-06-05T14:10:43.678Z"}},
 	)
 
 	assert.Nil(suite.T(), err)

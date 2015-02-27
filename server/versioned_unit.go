@@ -13,6 +13,7 @@ type VersionedUnit struct {
 	CurrentState string `json:"current_state"`
 	DesiredState string `json:"desired_state"`
 	MachineID    string `json:"machine_id"`
+	Timestamp    string `json:"deploy_timestamp"`
 }
 
 // FindServiceUnits parses an array of units returned from fleet and looks for
@@ -31,6 +32,7 @@ func FindServiceUnits(serviceName string, units []*schema.Unit) []VersionedUnit 
 				Service:      serviceName,
 				Instance:     extractable.ExtractInstance(),
 				Version:      extractable.ExtractVersion(),
+				Timestamp:    extractable.ExtractTimestamp(),
 				CurrentState: extractable.CurrentState,
 				DesiredState: extractable.DesiredState,
 				MachineID:    extractable.MachineID,

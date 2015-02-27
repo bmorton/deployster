@@ -42,6 +42,7 @@ type DeployRequest struct {
 type Deploy struct {
 	Version         string `json:"version"`
 	DestroyPrevious bool   `json:"destroy_previous"`
+	Timestamp       string `json:"timestamp,omitempty"`
 }
 
 // UnitTemplate is the view model that is passed to the template parser that
@@ -64,7 +65,16 @@ type UnitTemplate struct {
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
-	fleetName := fleetServiceName(serviceName, req.Deploy.Version, "1")
+
+	var timestamp string
+	if req.Deploy.Timestamp != "" {
+		timestamp = req.Deploy.Timestamp
+	} else {
+		t := time.Now()
+		timestamp = t.UTC().Format(time.RFC3339)
+	}
+
+	fleetName := fleetServiceName(serviceName, req.Deploy.Version, timestamp, "1")
 
 	if req.Deploy.DestroyPrevious {
 		units, err := dr.Fleet.Units()
@@ -75,10 +85,11 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		previousUnits := FindServiceUnits(serviceName, units)
 
 		for _, unit := range previousUnits {
-			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Instance)
+			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance)
+			newFleetName := fleetServiceName(serviceName, req.Deploy.Version, timestamp, unit.Instance)
 			if unit.Version != req.Deploy.Version {
 				log.Printf("Launching watcher for %s.\n", rangeFleetName)
-				go dr.destroyPrevious(serviceName, unit.Version, req.Deploy.Version, unit.Instance, destroyPreviousCheckDelay)
+				go dr.destroyPrevious(rangeFleetName, newFleetName, destroyPreviousCheckDelay)
 			}
 		}
 	}
@@ -103,7 +114,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
 // service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
-	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"), "1")
+	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"), "", "1")
 
 	err := dr.Fleet.DestroyUnit(fleetName)
 	if err != nil {
@@ -127,24 +138,21 @@ func getUnitOptions(name string, version string, imagePrefix string) []*schema.U
 
 // fleetServiceName generates a fleet unit name with the service name, version,
 // and instance encoded within it.
-func fleetServiceName(name string, version string, instance string) string {
-	return fmt.Sprintf("%s-%s@%s.service", name, version, instance)
+func fleetServiceName(name string, version string, timestamp string, instance string) string {
+	return fmt.Sprintf("%s:%s_%s@%s.service", name, version, timestamp, instance)
 }
 
 // destroyPrevious is responsible for watching for a new version of a service to
 // complete launching on the `destroyPreviousCheckDelay` interval so that it can
 // fire off a request to destroy the previous version.  If this doesn't complete
 // before the destroyPreviousCheckTimeout, the attempt will be abandoned.
-func (dr *DeploysResource) destroyPrevious(name string, previousVersion string, currentVersion string, instance string, checkDelay time.Duration) {
+func (dr *DeploysResource) destroyPrevious(previousFleetUnit string, currentFleetUnit string, checkDelay time.Duration) {
 	timeoutChan := make(chan bool, 1)
 
 	go func() {
 		time.Sleep(destroyPreviousCheckTimeout)
 		timeoutChan <- true
 	}()
-
-	currentFleetUnit := fleetServiceName(name, currentVersion, instance)
-	previousFleetUnit := fleetServiceName(name, previousVersion, instance)
 
 	for {
 		startCheck := time.After(checkDelay)

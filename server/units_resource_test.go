@@ -42,7 +42,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoResults() {
 }
 
 func (suite *UnitsResourceTestSuite) TestIndexWithNoMatchingResultsForService() {
-	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "differentapp-efefeff@1.service", []*schema.UnitOption{}}}, nil)
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "differentapp:efefeff_2013-06-05T14:10:43Z@1.service", []*schema.UnitOption{}}}, nil)
 
 	code, _, response, err := suite.Subject.Index(
 		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),
@@ -57,7 +57,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoMatchingResultsForService() 
 }
 
 func (suite *UnitsResourceTestSuite) TestIndexWithMatchingResultsForService() {
-	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "carousel-efefeff@1.service", []*schema.UnitOption{}}}, nil)
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "abc123", "carousel:efefeff_2013-06-05T14:10:43Z@1.service", []*schema.UnitOption{}}}, nil)
 
 	code, _, response, err := suite.Subject.Index(
 		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),
@@ -67,7 +67,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithMatchingResultsForService() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 200, code)
-	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123"}}}, response)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2013-06-05T14:10:43Z"}}}, response)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
