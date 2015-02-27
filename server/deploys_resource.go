@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -65,6 +66,7 @@ type UnitTemplate struct {
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
+	instances := 1
 
 	var timestamp string
 	if req.Deploy.Timestamp != "" {
@@ -73,8 +75,6 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		t := time.Now()
 		timestamp = t.UTC().Format(time.RFC3339)
 	}
-
-	fleetName := fleetServiceName(serviceName, req.Deploy.Version, timestamp, "1")
 
 	if req.Deploy.DestroyPrevious {
 		units, err := dr.Fleet.Units()
@@ -94,14 +94,24 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		}
 	}
 
-	err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetName, Options: options})
-	if err != nil {
-		return http.StatusInternalServerError, nil, nil, err
+	// Make sure all units exist before we start setting their target states
+	for i := 1; i <= instances; i++ {
+		fleetUnit := fleetServiceName(serviceName, req.Deploy.Version, timestamp, strconv.Itoa(i))
+		log.Printf("Creating %s.\n", fleetUnit)
+		err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetUnit, Options: options})
+		if err != nil {
+			return http.StatusInternalServerError, nil, nil, err
+		}
 	}
 
-	err = dr.Fleet.SetUnitTargetState(fleetName, "launched")
-	if err != nil {
-		return http.StatusInternalServerError, nil, nil, err
+	// Now that all the units exist, we can launch each of them
+	for i := 1; i <= instances; i++ {
+		fleetUnit := fleetServiceName(serviceName, req.Deploy.Version, timestamp, strconv.Itoa(i))
+		log.Printf("Launching %s.\n", fleetUnit)
+		err := dr.Fleet.SetUnitTargetState(fleetUnit, "launched")
+		if err != nil {
+			return http.StatusInternalServerError, nil, nil, err
+		}
 	}
 
 	return http.StatusCreated, nil, nil, nil
