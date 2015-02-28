@@ -33,7 +33,7 @@ func (ur *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int,
 		log.Printf("%#v\n", err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	response.Units = FindServiceUnits(u.Query().Get("name"), units)
+	response.Units = FindServiceUnits(u.Query().Get("name"), "", units)
 
 	return statusCode, nil, response, nil
 }

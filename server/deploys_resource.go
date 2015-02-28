@@ -82,15 +82,13 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			log.Printf("%#v\n", err)
 			return http.StatusInternalServerError, nil, nil, err
 		}
-		previousUnits := FindServiceUnits(serviceName, units)
+		previousUnits := FindServiceUnits(serviceName, req.Deploy.Version, units)
 
 		for _, unit := range previousUnits {
 			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance)
 			newFleetName := fleetServiceName(serviceName, req.Deploy.Version, timestamp, unit.Instance)
-			if unit.Version != req.Deploy.Version {
-				log.Printf("Launching watcher for %s.\n", rangeFleetName)
-				go dr.destroyPrevious(rangeFleetName, newFleetName, destroyPreviousCheckDelay)
-			}
+			log.Printf("Launching watcher for %s.\n", rangeFleetName)
+			go dr.destroyPrevious(rangeFleetName, newFleetName, destroyPreviousCheckDelay)
 		}
 	}
 
@@ -134,10 +132,10 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 		log.Printf("%#v\n", err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	serviceUnits := FindServiceUnits(serviceName, units)
+	serviceUnits := FindServiceUnits(serviceName, version, units)
 
 	for _, unit := range serviceUnits {
-		if unit.Version == version && shouldDestroyUnit(u.Query().Get("timestamp"), unit.Timestamp) {
+		if shouldDestroyUnit(u.Query().Get("timestamp"), unit.Timestamp) {
 			err := dr.Fleet.DestroyUnit(fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance))
 			if err != nil {
 				return http.StatusInternalServerError, nil, nil, err

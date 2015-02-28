@@ -21,7 +21,11 @@ type VersionedUnit struct {
 // Fleet unit name.  It collects all those units and returns an array of
 // VersionedUnit structs that have had their additional deployster-specific
 // fields populated from the Fleet unit name.
-func FindServiceUnits(serviceName string, units []*schema.Unit) []VersionedUnit {
+//
+// Optional filtering by version is available too.  If all versions are desired,
+// set version to "".  If a specific version is desired, set version to that
+// version.
+func FindServiceUnits(serviceName string, version string, units []*schema.Unit) []VersionedUnit {
 	versionedUnits := []VersionedUnit{}
 
 	for _, u := range units {
@@ -37,7 +41,9 @@ func FindServiceUnits(serviceName string, units []*schema.Unit) []VersionedUnit 
 				DesiredState: extractable.DesiredState,
 				MachineID:    extractable.MachineID,
 			}
-			versionedUnits = append(versionedUnits, i)
+			if shouldIncludeVersion(version, i.Version) {
+				versionedUnits = append(versionedUnits, i)
+			}
 		}
 	}
 
@@ -65,4 +71,17 @@ func FindServiceVersions(serviceName string, units []*schema.Unit) []string {
 	}
 
 	return versions
+}
+
+// shouldIncludeVersion takes an optional version checker and, if specified,
+// ensures that it matches the unitVersion.  If the optional version is left
+// blank, we'll return true.  If the optional version is present and it doesn't
+// match the unitVersion, we'll return false.
+func shouldIncludeVersion(blankOrVersion string, unitVersion string) bool {
+	if blankOrVersion == "" {
+		return true
+	} else if blankOrVersion == unitVersion {
+		return true
+	}
+	return false
 }
