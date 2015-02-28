@@ -118,17 +118,31 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 }
 
 // Destroy is the DELETE endpoint for destroying the units associated with
-// the service name and version provided.
+// the service name and version provided.  It will destroy all instances of a
+// unit that exists within Fleet.  If a timestamp query parameter is provided,
+// only units that match that timestamp will be destroyed.
 //
 // This function assumes that it is nested inside
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
-// service name/version and providing it via query params.
+// service name/version/timestamp and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
-	fleetName := fleetServiceName(u.Query().Get("name"), u.Query().Get("version"), "", "1")
+	serviceName := u.Query().Get("name")
+	version := u.Query().Get("version")
 
-	err := dr.Fleet.DestroyUnit(fleetName)
+	units, err := dr.Fleet.Units()
 	if err != nil {
+		log.Printf("%#v\n", err)
 		return http.StatusInternalServerError, nil, nil, err
+	}
+	serviceUnits := FindServiceUnits(serviceName, units)
+
+	for _, unit := range serviceUnits {
+		if unit.Version == version && shouldDestroyUnit(u.Query().Get("timestamp"), unit.Timestamp) {
+			err := dr.Fleet.DestroyUnit(fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance))
+			if err != nil {
+				return http.StatusInternalServerError, nil, nil, err
+			}
+		}
 	}
 
 	return http.StatusNoContent, nil, nil, nil
@@ -150,6 +164,19 @@ func getUnitOptions(name string, version string, imagePrefix string) []*schema.U
 // and instance encoded within it.
 func fleetServiceName(name string, version string, timestamp string, instance string) string {
 	return fmt.Sprintf("%s:%s:%s@%s.service", name, version, timestamp, instance)
+}
+
+// shouldDestroyUnit takes an optional input from the query string and, if
+// specified, ensures that it matches the unitTimestamp.  If the optional input
+// is left blank, we'll return true.  If the optional input is present and it
+// doesn't match the timestamp, we'll return false.
+func shouldDestroyUnit(blankOrTimestampToMatch string, unitTimestamp string) bool {
+	if blankOrTimestampToMatch == "" {
+		return true
+	} else if blankOrTimestampToMatch == unitTimestamp {
+		return true
+	}
+	return false
 }
 
 // destroyPrevious is responsible for watching for a new version of a service to

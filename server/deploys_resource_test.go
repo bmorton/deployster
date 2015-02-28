@@ -73,13 +73,55 @@ func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
-func (suite *DeploysResourceTestSuite) TestDestroy() {
-	suite.FleetClientMock.On("DestroyUnit", "carousel:cccddd:@1.service").Return(nil)
+func (suite *DeploysResourceTestSuite) TestDestroySingleInstance() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}}}, nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:efefeff:2006.01.02-15.04.05@1.service").Return(nil)
 
 	code, _, response, err := suite.Subject.Destroy(
-		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/cccddd"),
+		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/efefeff"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", false, "2006.01.02-15.04.05"}},
+		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05"}},
+	)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), 204, code)
+	assert.Equal(suite.T(), nil, response)
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
+func (suite *DeploysResourceTestSuite) TestDestroyMultipleInstances() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@2.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "3e33333", "carousel:3e33333:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+	}, nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:efefeff:2006.01.02-15.04.05@1.service").Return(nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:efefeff:2006.01.02-15.04.05@2.service").Return(nil)
+
+	code, _, response, err := suite.Subject.Destroy(
+		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/efefeff"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05"}},
+	)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), 204, code)
+	assert.Equal(suite.T(), nil, response)
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
+func (suite *DeploysResourceTestSuite) TestDestroyMultipleInstancesWithTimestampSpecified() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2012.01.02-15.04.05@2.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "3e33333", "carousel:3e33333:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+	}, nil)
+	suite.FleetClientMock.On("DestroyUnit", "carousel:efefeff:2006.01.02-15.04.05@1.service").Return(nil)
+
+	code, _, response, err := suite.Subject.Destroy(
+		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/efefeff?timestamp=2006.01.02-15.04.05"),
+		mocking.Header(nil),
+		nil,
 	)
 
 	assert.Nil(suite.T(), err)
