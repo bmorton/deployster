@@ -73,7 +73,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		timestamp = req.Deploy.Timestamp
 	} else {
 		t := time.Now()
-		timestamp = t.UTC().Format(time.RFC3339)
+		timestamp = t.UTC().Format("2006.01.02-15.04.05")
 	}
 
 	if req.Deploy.DestroyPrevious {
@@ -149,7 +149,7 @@ func getUnitOptions(name string, version string, imagePrefix string) []*schema.U
 // fleetServiceName generates a fleet unit name with the service name, version,
 // and instance encoded within it.
 func fleetServiceName(name string, version string, timestamp string, instance string) string {
-	return fmt.Sprintf("%s:%s_%s@%s.service", name, version, timestamp, instance)
+	return fmt.Sprintf("%s:%s:%s@%s.service", name, version, timestamp, instance)
 }
 
 // destroyPrevious is responsible for watching for a new version of a service to
