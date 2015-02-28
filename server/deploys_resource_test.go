@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bmorton/deployster/server/mocks"
@@ -34,7 +35,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", false, "2006.01.02-15.04.05"}},
+		&DeployRequest{Deploy{"abc123", false, "2006.01.02-15.04.05", 1}},
 	)
 
 	assert.Nil(suite.T(), err)
@@ -52,12 +53,29 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviou
 	code, _, response, err := suite.Subject.Create(
 		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"abc123", true, "2006.01.02-15.04.05"}},
+		&DeployRequest{Deploy{"abc123", true, "2006.01.02-15.04.05", 1}},
 	)
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 201, code)
 	assert.Equal(suite.T(), nil, response)
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
+func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndTooManyInstancesRunning() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@2.service", []*schema.UnitOption{}},
+	}, nil)
+
+	code, _, _, err := suite.Subject.Create(
+		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{"abc123", true, "2006.01.02-15.04.05", 1}},
+	)
+
+	assert.Contains(suite.T(), fmt.Sprintf("%s", err), "A greater amount of instances")
+	assert.Equal(suite.T(), 400, code)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
@@ -80,7 +98,7 @@ func (suite *DeploysResourceTestSuite) TestDestroySingleInstance() {
 	code, _, response, err := suite.Subject.Destroy(
 		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/efefeff"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05"}},
+		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05", 1}},
 	)
 
 	assert.Nil(suite.T(), err)
@@ -101,7 +119,7 @@ func (suite *DeploysResourceTestSuite) TestDestroyMultipleInstances() {
 	code, _, response, err := suite.Subject.Destroy(
 		mocking.URL(suite.Service.RootMux, "DELETE", "http://example.com/v1/services/carousel/deploys/efefeff"),
 		mocking.Header(nil),
-		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05"}},
+		&DeployRequest{Deploy{"efefeff", false, "2006.01.02-15.04.05", 1}},
 	)
 
 	assert.Nil(suite.T(), err)

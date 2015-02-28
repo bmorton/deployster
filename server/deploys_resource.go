@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -44,6 +45,7 @@ type Deploy struct {
 	Version         string `json:"version"`
 	DestroyPrevious bool   `json:"destroy_previous"`
 	Timestamp       string `json:"timestamp,omitempty"`
+	Instances       int    `json:"instances,omitempty"`
 }
 
 // UnitTemplate is the view model that is passed to the template parser that
@@ -66,7 +68,7 @@ type UnitTemplate struct {
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
-	instances := 1
+	instances := req.Deploy.Instances
 
 	var timestamp string
 	if req.Deploy.Timestamp != "" {
@@ -82,7 +84,11 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			log.Printf("%#v\n", err)
 			return http.StatusInternalServerError, nil, nil, err
 		}
-		previousUnits := FindServiceUnits(serviceName, req.Deploy.Version, units)
+		previousUnits := FindServiceUnits(serviceName, "", units)
+
+		if instances < len(previousUnits) {
+			return http.StatusBadRequest, nil, nil, errors.New("A greater amount of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running.")
+		}
 
 		for _, unit := range previousUnits {
 			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance)
