@@ -8,7 +8,7 @@ Currently this project is in use for a few side projects, but is not in heavy pr
 
 
 ### Features
-* Deploy a new version of a service from the Docker registry (with optionally destroying the previously running version)
+* Deploy a new version of a service from a Docker registry (with optionally destroying the previously running version after deploy)
 * Shutdown a deployed version of a service
 * List all units associated to a service
 * Basic authentication and HTTPS support
