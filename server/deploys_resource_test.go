@@ -27,8 +27,68 @@ func (suite *DeploysResourceTestSuite) SetupTest() {
 	suite.Subject = DeploysResource{suite.FleetClientMock, "mmmhm"}
 }
 
+func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndNoInstancesRunning() {
+	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
+
+	// Should only start 1 unit
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)
+
+	suite.Subject.Create(
+		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{Version: "abc123", DestroyPrevious: false, Timestamp: "2006.01.02-15.04.05"}},
+	)
+
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
+func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultipleInstancesRunning() {
+	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@2.service", []*schema.UnitOption{}},
+	}, nil)
+
+	// Should start 2 units
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@2.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@2.service", "launched").Return(nil)
+
+	suite.Subject.Create(
+		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{Version: "abc123", DestroyPrevious: false, Timestamp: "2006.01.02-15.04.05"}},
+	)
+
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
+func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultipleVersionsRunning() {
+	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "abbbbbb", "carousel:abbbbbb:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+	}, nil)
+
+	// Should start 1 unit
+	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
+	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)
+
+	suite.Subject.Create(
+		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{Version: "abc123", DestroyPrevious: false, Timestamp: "2006.01.02-15.04.05"}},
+	)
+
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
 func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
 	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
 	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)
 
