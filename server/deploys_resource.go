@@ -200,10 +200,10 @@ func fleetServiceName(name string, version string, timestamp string, instance st
 	return fmt.Sprintf("%s:%s:%s@%s.service", name, version, timestamp, instance)
 }
 
-// shouldDestroyUnit takes an optional input from the query string and, if
-// specified, ensures that it matches the unitTimestamp.  If the optional input
-// is left blank, we'll return true.  If the optional input is present and it
-// doesn't match the timestamp, we'll return false.
+// shouldDestroyUnit takes an optional timestamp (from the query string) and, if
+// specified, ensures that it matches the unitTimestamp.  If the optional
+// timestamp is left blank, we'll return true.  If the optional timestamp is
+// present and it doesn't match the timestamp, we'll return false.
 func shouldDestroyUnit(blankOrTimestampToMatch string, unitTimestamp string) bool {
 	if blankOrTimestampToMatch == "" {
 		return true
