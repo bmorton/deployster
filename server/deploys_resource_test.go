@@ -28,7 +28,7 @@ func (suite *DeploysResourceTestSuite) SetupTest() {
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndNoInstancesRunning() {
-	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	expectedOptions := getUnitOptions(UnitTemplate{"carousel", "abc123", "mmmhm", "2006.01.02-15.04.05"})
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
 
 	// Should only start 1 unit
@@ -45,7 +45,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndNoInst
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultipleInstancesRunning() {
-	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	expectedOptions := getUnitOptions(UnitTemplate{"carousel", "abc123", "mmmhm", "2006.01.02-15.04.05"})
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
 		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
 		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@2.service", []*schema.UnitOption{}},
@@ -67,7 +67,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultip
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultipleVersionsRunning() {
-	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	expectedOptions := getUnitOptions(UnitTemplate{"carousel", "abc123", "mmmhm", "2006.01.02-15.04.05"})
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
 		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
 		&schema.Unit{"running", "running", "abbbbbb", "carousel:abbbbbb:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
@@ -87,7 +87,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndMultip
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
-	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	expectedOptions := getUnitOptions(UnitTemplate{"carousel", "abc123", "mmmhm", "2006.01.02-15.04.05"})
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
 	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
 	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)
@@ -105,7 +105,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithoutDestroyPrevious() {
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndNoPreviousVersions() {
-	expectedOptions := getUnitOptions("carousel", "abc123", "mmmhm")
+	expectedOptions := getUnitOptions(UnitTemplate{"carousel", "abc123", "mmmhm", "2006.01.02-15.04.05"})
 	suite.FleetClientMock.On("Units").Return([]*schema.Unit{}, nil)
 	suite.FleetClientMock.On("CreateUnit", &schema.Unit{Name: "carousel:abc123:2006.01.02-15.04.05@1.service", Options: expectedOptions}).Return(nil)
 	suite.FleetClientMock.On("SetUnitTargetState", "carousel:abc123:2006.01.02-15.04.05@1.service", "launched").Return(nil)

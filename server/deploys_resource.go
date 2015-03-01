@@ -54,6 +54,7 @@ type UnitTemplate struct {
 	Name        string
 	Version     string
 	ImagePrefix string
+	Timestamp   string
 }
 
 // Create is the POST endpoint for kicking off a new deployment of the service
@@ -141,7 +142,7 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 // startUnits is a helper function for ensuring that Fleet has all the units
 // configured and for launching those units.
 func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instances int) error {
-	options := getUnitOptions(serviceName, version, dr.ImagePrefix)
+	options := getUnitOptions(UnitTemplate{serviceName, version, dr.ImagePrefix, timestamp})
 
 	// Make sure all units exist before we start setting their target states
 	for i := 1; i <= instances; i++ {
@@ -183,10 +184,10 @@ func determineNumberOfInstances(instances int, numberOfVersions int, numberOfUni
 
 // getUnitOptions renders the unit file and converts it to an array of
 // UnitOption structs.
-func getUnitOptions(name string, version string, imagePrefix string) []*schema.UnitOption {
+func getUnitOptions(unitViewTemplate UnitTemplate) []*schema.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
-	t.Execute(&unitTemplate, UnitTemplate{name, version, imagePrefix})
+	t.Execute(&unitTemplate, unitViewTemplate)
 
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 
