@@ -1,6 +1,7 @@
 package mocks
 
 import "github.com/stretchr/testify/mock"
+
 import "github.com/coreos/fleet/schema"
 
 type FleetClient struct {
@@ -36,4 +37,11 @@ func (m *FleetClient) UnitStates() ([]*schema.UnitState, error) {
 	r1 := ret.Error(1)
 
 	return r0, r1
+}
+func (m *FleetClient) SetUnitTargetState(_a0 string, _a1 string) error {
+	ret := m.Called(_a0, _a1)
+
+	r0 := ret.Error(0)
+
+	return r0
 }

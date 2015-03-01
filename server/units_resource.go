@@ -30,10 +30,10 @@ func (ur *UnitsResource) Index(u *url.URL, h http.Header, req interface{}) (int,
 
 	units, err := ur.Fleet.Units()
 	if err != nil {
-		log.Printf("%#v\n", err)
+		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	response.Units = FindServiceUnits(u.Query().Get("name"), units)
+	response.Units = FindServiceUnits(u.Query().Get("name"), "", units)
 
 	return statusCode, nil, response, nil
 }

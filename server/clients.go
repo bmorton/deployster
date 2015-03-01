@@ -20,4 +20,5 @@ type FleetClient interface {
 	CreateUnit(*schema.Unit) error
 	DestroyUnit(string) error
 	UnitStates() ([]*schema.UnitState, error)
+	SetUnitTargetState(string, string) error
 }

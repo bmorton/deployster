@@ -12,24 +12,34 @@ import (
 type ExtractableUnit schema.Unit
 
 // ExtractBaseName returns the name of the service from the Fleet unit name.
-// Given "railsapp-cf2e8ac@1.service" this returns "railsapp"
+// Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns "railsapp"
 func (eu *ExtractableUnit) ExtractBaseName() string {
-	s := strings.LastIndex(eu.Name, "-")
+	s := strings.Index(eu.Name, ":")
 	return eu.Name[0:s]
 }
 
 // ExtractVersion returns the version of the service from the Fleet unit name.
-// Given "railsapp-cf2e8ac@1.service" this returns "cf2e8ac"
+// Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns "cf2e8ac"
 func (eu *ExtractableUnit) ExtractVersion() string {
-	start := strings.LastIndex(eu.Name, "-")
-	end := strings.LastIndex(eu.Name, "@")
+	start := strings.Index(eu.Name, ":")
+	end := strings.LastIndex(eu.Name, ":")
 	return eu.Name[start+1 : end]
 }
 
 // ExtractInstance returns the instance of the service from the Fleet unit name.
-// Given "railsapp-cf2e8ac@1.service" this returns "1"
+// Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns "1"
 func (eu *ExtractableUnit) ExtractInstance() string {
-	s := strings.Split(eu.Name, "@")
-	end := strings.Index(s[1], ".")
-	return s[1][:end]
+	start := strings.LastIndex(eu.Name, "@")
+	end := strings.LastIndex(eu.Name, ".")
+	return eu.Name[start+1 : end]
+}
+
+// ExtractTimestamp returns the deploy timestamp that is appended to the Fleet
+// unit name.
+// Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns
+// "2013-06-05T14:10:43Z"
+func (eu *ExtractableUnit) ExtractTimestamp() string {
+	start := strings.LastIndex(eu.Name, ":")
+	end := strings.LastIndex(eu.Name, "@")
+	return eu.Name[start+1 : end]
 }
