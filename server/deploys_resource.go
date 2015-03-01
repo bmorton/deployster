@@ -75,7 +75,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 
 	units, err := dr.Fleet.Units()
 	if err != nil {
-		log.Printf("%#v\n", err)
+		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
 
@@ -122,7 +122,7 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 
 	units, err := dr.Fleet.Units()
 	if err != nil {
-		log.Printf("%#v\n", err)
+		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
 	serviceUnits := FindServiceUnits(serviceName, version, units)
@@ -242,7 +242,7 @@ func (dr *DeploysResource) destroyPrevious(previousFleetUnit string, currentFlee
 						log.Printf("%s has launched, destroying %s.\n", currentFleetUnit, previousFleetUnit)
 						err := dr.Fleet.DestroyUnit(previousFleetUnit)
 						if err != nil {
-							log.Printf("%#v\n", err)
+							log.Println(err)
 						}
 						return
 					}
