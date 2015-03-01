@@ -134,7 +134,7 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndTooManyIn
 		&DeployRequest{Deploy{"abc123", true, "2006.01.02-15.04.05", 1}},
 	)
 
-	assert.Contains(suite.T(), fmt.Sprintf("%s", err), "A greater amount of instances")
+	assert.Contains(suite.T(), fmt.Sprintf("%s", err), "A greater number of instances")
 	assert.Equal(suite.T(), 400, code)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }

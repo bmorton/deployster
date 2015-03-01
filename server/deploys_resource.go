@@ -45,7 +45,7 @@ type Deploy struct {
 	Version         string `json:"version"`
 	DestroyPrevious bool   `json:"destroy_previous"`
 	Timestamp       string `json:"timestamp,omitempty"`
-	Instances       int    `json:"instances,omitempty"`
+	InstanceCount   int    `json:"instance_count,omitempty"`
 }
 
 // UnitTemplate is the view model that is passed to the template parser that
@@ -87,8 +87,8 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			return http.StatusBadRequest, nil, nil, errors.New("Too many versions are running.  Destroying previous units is not supported when more than one version is currently running.")
 		}
 
-		if req.Deploy.Instances != 0 && req.Deploy.Instances < len(previousUnits) {
-			return http.StatusBadRequest, nil, nil, errors.New("A greater amount of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running or disable destroying previous units.")
+		if req.Deploy.InstanceCount != 0 && req.Deploy.InstanceCount < len(previousUnits) {
+			return http.StatusBadRequest, nil, nil, errors.New("A greater number of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running or disable destroying previous units.")
 		}
 
 		for _, unit := range previousUnits {
@@ -99,8 +99,8 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		}
 	}
 
-	instances := determineNumberOfInstances(req.Deploy.Instances, len(previousVersions), len(previousUnits))
-	err = dr.startUnits(serviceName, req.Deploy.Version, req.Deploy.Timestamp, instances)
+	instanceCount := determineNumberOfInstances(req.Deploy.InstanceCount, len(previousVersions), len(previousUnits))
+	err = dr.startUnits(serviceName, req.Deploy.Version, req.Deploy.Timestamp, instanceCount)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -141,11 +141,11 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 
 // startUnits is a helper function for ensuring that Fleet has all the units
 // configured and for launching those units.
-func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instances int) error {
+func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instanceCount int) error {
 	options := getUnitOptions(UnitTemplate{serviceName, version, dr.ImagePrefix, timestamp})
 
 	// Make sure all units exist before we start setting their target states
-	for i := 1; i <= instances; i++ {
+	for i := 1; i <= instanceCount; i++ {
 		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
 		log.Printf("Creating %s.\n", fleetUnit)
 		err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetUnit, Options: options})
@@ -155,7 +155,7 @@ func (dr *DeploysResource) startUnits(serviceName string, version string, timest
 	}
 
 	// Now that all the units exist, we can launch each of them
-	for i := 1; i <= instances; i++ {
+	for i := 1; i <= instanceCount; i++ {
 		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
 		log.Printf("Launching %s.\n", fleetUnit)
 		err := dr.Fleet.SetUnitTargetState(fleetUnit, "launched")
@@ -170,9 +170,9 @@ func (dr *DeploysResource) startUnits(serviceName string, version string, timest
 // determineNumberOfInstances is a helper function to either return the number
 // of instances specified or provide a default value based on the number of
 // running versions and units.
-func determineNumberOfInstances(instances int, numberOfVersions int, numberOfUnits int) int {
-	if instances != 0 {
-		return instances
+func determineNumberOfInstances(instanceCount int, numberOfVersions int, numberOfUnits int) int {
+	if instanceCount != 0 {
+		return instanceCount
 	}
 
 	if numberOfVersions == 1 {
