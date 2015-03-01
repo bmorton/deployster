@@ -67,15 +67,9 @@ type UnitTemplate struct {
 // params.
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
-	options := getUnitOptions(serviceName, req.Deploy.Version, dr.ImagePrefix)
-	instances := req.Deploy.Instances
 
-	var timestamp string
-	if req.Deploy.Timestamp != "" {
-		timestamp = req.Deploy.Timestamp
-	} else {
-		t := time.Now()
-		timestamp = t.UTC().Format("2006.01.02-15.04.05")
+	if req.Deploy.Timestamp == "" {
+		req.Deploy.Timestamp = time.Now().UTC().Format("2006.01.02-15.04.05")
 	}
 
 	if req.Deploy.DestroyPrevious {
@@ -84,38 +78,28 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			log.Printf("%#v\n", err)
 			return http.StatusInternalServerError, nil, nil, err
 		}
-		previousUnits := FindServiceUnits(serviceName, "", units)
 
-		if instances < len(previousUnits) {
-			return http.StatusBadRequest, nil, nil, errors.New("A greater amount of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running.")
+		previousVersions := FindServiceVersions(serviceName, units)
+		if len(previousVersions) > 1 {
+			return http.StatusBadRequest, nil, nil, errors.New("Too many versions are running.  Destroying previous units is not supported when more than one version is currently running.")
+		}
+
+		previousUnits := FindServiceUnits(serviceName, "", units)
+		if req.Deploy.Instances < len(previousUnits) {
+			return http.StatusBadRequest, nil, nil, errors.New("A greater amount of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running or disable destroying previous units.")
 		}
 
 		for _, unit := range previousUnits {
 			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance)
-			newFleetName := fleetServiceName(serviceName, req.Deploy.Version, timestamp, unit.Instance)
+			newFleetName := fleetServiceName(serviceName, req.Deploy.Version, req.Deploy.Timestamp, unit.Instance)
 			log.Printf("Launching watcher for %s.\n", rangeFleetName)
 			go dr.destroyPrevious(rangeFleetName, newFleetName, destroyPreviousCheckDelay)
 		}
 	}
 
-	// Make sure all units exist before we start setting their target states
-	for i := 1; i <= instances; i++ {
-		fleetUnit := fleetServiceName(serviceName, req.Deploy.Version, timestamp, strconv.Itoa(i))
-		log.Printf("Creating %s.\n", fleetUnit)
-		err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetUnit, Options: options})
-		if err != nil {
-			return http.StatusInternalServerError, nil, nil, err
-		}
-	}
-
-	// Now that all the units exist, we can launch each of them
-	for i := 1; i <= instances; i++ {
-		fleetUnit := fleetServiceName(serviceName, req.Deploy.Version, timestamp, strconv.Itoa(i))
-		log.Printf("Launching %s.\n", fleetUnit)
-		err := dr.Fleet.SetUnitTargetState(fleetUnit, "launched")
-		if err != nil {
-			return http.StatusInternalServerError, nil, nil, err
-		}
+	err := dr.startUnits(serviceName, req.Deploy.Version, req.Deploy.Timestamp, req.Deploy.Instances)
+	if err != nil {
+		return http.StatusInternalServerError, nil, nil, err
 	}
 
 	return http.StatusCreated, nil, nil, nil
@@ -150,6 +134,32 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 	}
 
 	return http.StatusNoContent, nil, nil, nil
+}
+
+func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instances int) error {
+	options := getUnitOptions(serviceName, version, dr.ImagePrefix)
+
+	// Make sure all units exist before we start setting their target states
+	for i := 1; i <= instances; i++ {
+		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
+		log.Printf("Creating %s.\n", fleetUnit)
+		err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetUnit, Options: options})
+		if err != nil {
+			return err
+		}
+	}
+
+	// Now that all the units exist, we can launch each of them
+	for i := 1; i <= instances; i++ {
+		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
+		log.Printf("Launching %s.\n", fleetUnit)
+		err := dr.Fleet.SetUnitTargetState(fleetUnit, "launched")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // getUnitOptions renders the unit file and converts it to an array of

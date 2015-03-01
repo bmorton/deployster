@@ -79,6 +79,23 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndTooManyIn
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
+func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndTooManyVersionsRunning() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "aabbccd", "carousel:aabbccd:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+	}, nil)
+
+	code, _, _, err := suite.Subject.Create(
+		mocking.URL(suite.Service.RootMux, "POST", "http://example.com/v1/services/carousel/deploys"),
+		mocking.Header(nil),
+		&DeployRequest{Deploy{"abc123", true, "2006.01.02-15.04.05", 1}},
+	)
+
+	assert.Contains(suite.T(), fmt.Sprintf("%s", err), "Too many versions")
+	assert.Equal(suite.T(), 400, code)
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
 func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
 	mockedStates := []*schema.UnitState{
 		&schema.UnitState{"", "", "carousel:cccddd:2006.01.02-15.04.05@1.service", "", "", "running"},
