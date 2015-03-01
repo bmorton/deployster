@@ -115,7 +115,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 //
 // This function assumes that it is nested inside
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
-// service name/version/timestamp and providing it via query params.
+// service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
 	serviceName := u.Query().Get("name")
 	version := u.Query().Get("version")
