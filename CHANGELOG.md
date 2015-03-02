@@ -1,6 +1,11 @@
 ## v0.3.0 (unreleased)
 
+Features:
+
+  * Deployment of multiple instances ([#30][issue-30])
+
 Fixes:
+
   * Removed homegrown Fleet client and replaced with official CoreOS client ([#29][issue-29])
   * Fixed bug with ignore Fleet responses with multiple pages
 
@@ -36,3 +41,4 @@ Features:
 [issue-17]: https://github.com/bmorton/deployster/pull/17
 [issue-27]: https://github.com/bmorton/deployster/pull/27
 [issue-29]: https://github.com/bmorton/deployster/pull/29
+[issue-30]: https://github.com/bmorton/deployster/pull/30
