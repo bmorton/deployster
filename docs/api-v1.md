@@ -8,7 +8,7 @@ Requests are authenticated using HTTP Basic authentication.  Deployster is launc
 ## Deploys resource
 
 ### Start a new deploy
-Trigger an asynchronous deploy of a service, optionally cleaning up an old version upon completion.
+Trigger an asynchronous deploy of a service, optionally cleaning up an old version upon completion.  If destroy previous versions is enabled, Deployster will start all new instances and watch for these instances to be launched on a 1 second interval.  After each new instance has finished launching, the matching instance with the previous version will be destroyed.  There's a possibility that all instances of the old and new versions will be running for a brief period of time until the old instances start to be killed off.
 
 ```http
 POST /v1/services/{name}/deploys HTTP/1.1
