@@ -15,9 +15,9 @@ Trigger an asynchronous deploy of a service, optionally cleaning up an old versi
 {
   "deploy": {
     "version": "abc123f",
-    "destroy_previous": true, // (optional)
-    "timestamp": "2006.01.02-15.04.05", // (optional)
-    "instance_count": 4 // (optional)
+    "destroy_previous": true,
+    "timestamp": "2006.01.02-15.04.05",
+    "instance_count": 4
   }
 }
 ```
