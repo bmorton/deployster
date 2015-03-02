@@ -219,6 +219,7 @@ Exited (0)
 * Connection #0 to host localhost left intact
 ```
 
+* `GET /v1/services/hello-world/units`
 ```ShellOutput
 $ curl -v -u deployster:mmmhm http://localhost:1234/v1/services/hello-world/units
 * About to connect() to localhost port 1234 (#0)
