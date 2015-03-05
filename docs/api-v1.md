@@ -72,7 +72,7 @@ Date: Mon, 02 Mar 2015 00:24:41 GMT
 ## Tasks resource
 
 ### Launch a new task
-Run a time-boxed task using an image of the given service and version.  Tasks must complete within 10 minutes or they will be forcefully stopped.  If forcefully stopped, an exit code of 127 will be provided at the end of the response.
+Run a time-boxed task using an image of the given service and version.  Tasks must complete within 10 minutes or they will be forcefully stopped.  If forcefully stopped, an exit code of 124 will be provided at the end of the response.
 
 ```http
 POST /v1/services/{name}/tasks HTTP/1.1
