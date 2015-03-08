@@ -71,6 +71,24 @@ func (suite *UnitsResourceTestSuite) TestIndexWithMatchingResultsForService() {
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
+func (suite *UnitsResourceTestSuite) TestIndexWithNonDeploysterManagedUnits() {
+	suite.FleetClientMock.On("Units").Return([]*schema.Unit{
+		&schema.Unit{"running", "running", "abc123", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*schema.UnitOption{}},
+		&schema.Unit{"running", "running", "abc123", "vulcand.service", []*schema.UnitOption{}},
+	}, nil)
+
+	code, _, response, err := suite.Subject.Index(
+		mocking.URL(suite.Service.RootMux, "GET", "http://example.com/v1/services/carousel/units"),
+		mocking.Header(nil),
+		nil,
+	)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), 200, code)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2006.01.02-15.04.05"}}}, response)
+	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+}
+
 func TestUnitsResourceTestSuite(t *testing.T) {
 	suite.Run(t, new(UnitsResourceTestSuite))
 }

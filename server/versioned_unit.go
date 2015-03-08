@@ -31,7 +31,7 @@ func FindServiceUnits(serviceName string, version string, units []*schema.Unit) 
 	for _, u := range units {
 		dereferencedUnit := *u
 		extractable := ExtractableUnit(dereferencedUnit)
-		if extractable.ExtractBaseName() == serviceName {
+		if extractable.IsManaged() && extractable.ExtractBaseName() == serviceName {
 			i := VersionedUnit{
 				Service:      serviceName,
 				Instance:     extractable.ExtractInstance(),
@@ -60,7 +60,7 @@ func FindServiceVersions(serviceName string, units []*schema.Unit) []string {
 	for _, u := range units {
 		dereferencedUnit := *u
 		extractable := ExtractableUnit(dereferencedUnit)
-		if extractable.ExtractBaseName() == serviceName {
+		if extractable.IsManaged() && extractable.ExtractBaseName() == serviceName {
 			uniqueVersions[extractable.ExtractVersion()] = true
 		}
 	}

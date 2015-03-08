@@ -13,6 +13,13 @@ type ExtractableUnit schema.Unit
 
 // ExtractBaseName returns the name of the service from the Fleet unit name.
 // Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns "railsapp"
+func (eu *ExtractableUnit) IsManaged() bool {
+	s := strings.Count(eu.Name, ":")
+	return s == 2
+}
+
+// ExtractBaseName returns the name of the service from the Fleet unit name.
+// Given "railsapp:cf2e8ac:2006.01.02-15.04.05@1.service" this returns "railsapp"
 func (eu *ExtractableUnit) ExtractBaseName() string {
 	s := strings.Index(eu.Name, ":")
 	return eu.Name[0:s]
