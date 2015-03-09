@@ -1,16 +1,18 @@
-## v0.3.0 (unreleased)
+## v0.3.0 - March 8th, 2015
 
 Features:
 
   * Deployment of multiple instances ([#30][issue-30])
+  * Initial release of [`deployctl`](https://github.com/bmorton/deployctl)
 
 Fixes:
 
   * Removed homegrown Fleet client and replaced with official CoreOS client ([#29][issue-29])
-  * Fixed bug with ignore Fleet responses with multiple pages
+  * Fixed panic that occurred when Fleet units not managed by Deployster were running ([#39][issue-39])
+  * Fixed bug with ignoring Fleet responses with multiple pages
 
 
-## v0.2.0
+## v0.2.0 - February 18th, 2015
 
 Features:
 
@@ -26,7 +28,7 @@ Fixes:
   * Allow service names to contain hyphens ([#27][issue-27])
 
 
-## v0.1.0
+## v0.1.0 - January 5th, 2015
 
 Features:
 
@@ -42,3 +44,4 @@ Features:
 [issue-27]: https://github.com/bmorton/deployster/pull/27
 [issue-29]: https://github.com/bmorton/deployster/pull/29
 [issue-30]: https://github.com/bmorton/deployster/pull/30
+[issue-39]: https://github.com/bmorton/deployster/pull/39
