@@ -1,30 +1,32 @@
 # Deployster
 
-Deployster is a Golang HTTP service for simplifying deploys to a CoreOS [Fleet cluster][fleet-cluster].  It is extremely opinionated in how you tag your Docker images, where you store them, and how the service's unit files are configured.
+Deployster uses a convention-over-configuration approach to simplify deploying Docker containers to a CoreOS [Fleet cluster][fleet-cluster] with zero downtime.
 
-This project is also available as `bmorton/deployster` publicly on the [Docker Hub Registry][deployster-docker-hub].
-
-Currently this project is in use for a few side projects, but is not in heavy production use.  At this point it's experimental and feedback is very welcomed and appreciated.  [Yammer][yammer] has been exploring a similar path for production and this will likely be used in some prototyping there, as well.
+It is implemented in Golang as an HTTP service exposing a REST API to automate interactions with Fleet, Docker, and Vulcand.  As part of its convention-based approach, Deployster is opinionated in how images are tagged and stored, the configuration of unit files, and the bootstrapping of containers.
 
 
-### Features
-* Deploy a new version of a service from a Docker registry (with optionally destroying the previously running version after deploy)
-* Shutdown a deployed version of a service
-* List all units associated to a service
-* Basic authentication and HTTPS support
-* Custom task launching for doing things like [migrating a database][running-rails-migrations] using a given service image and version
-* Source images from the public Docker Hub Registry or a private registry
+### Comparison with vanilla Fleet
+
+Compared to manually using Fleet to deploy services, Deployster offers conveniences to automate repetitive tasks and provide a layer of conventions to easily handle deployments of many services while making it effortless to deploy new services.
+
+Here are some of the features that make this possible, all exposed through Deployster's REST API:
+
+* Deploy any number of instances of a new service using only the name of the Docker image and the tag/version
+* Facilitate new versions by starting up new version units and killing off the old units as the new ones come online
+* Launch custom tasks using the same images (for doing things like [migrating a database][running-rails-migrations])
+* [`deployctl`](https://github.com/bmorton/deployctl) utility for integrating with CI/CD and command-line workflows
+* Authentication and HTTPS support
 
 
 ### Requirements and limitations
 
 To use Deployster, you'll need:
 
-* **CoreOS cluster** - There are some tutorials for doing this on [DigitalOcean][digitalocean] and [Azure][azure].  Make sure to be using version 550.0.0 or greater of CoreOS so that Fleet's HTTP API is available for Deployster to use.
-* **HTTP service exposed on port 3000 of container** - This should be configurable in the future too.
-* **Stateless containers** - Linking in volumes is currently not supported.  Again, something for the future.
-* **Vulcand running** - For [zero downtime deploys][zero-downtime] of new versions of services.
-* **Automatic environment configuration** - As we're currently reusing the same unit file for all services, environment variables can't be passed to containers at boot, so containers need to use something like [etcd], [consul], or [confd][confd] to bootstrap themselves at launch.
+* CoreOS cluster running 550.0.0 or greater (tutorials available for [DigitalOcean][digitalocean] and [Azure][azure])
+* HTTP service exposed on port 3000 of image
+* [Stateless containers][12-factor-processes]
+* Vulcand (for [zero downtime deploys][zero-downtime] while cycling versions)
+* Automatic environment configuration.  When your container launches, [etcd] will be available for [bootstrapping your environment][confd].
 
 
 #### Task limitations
@@ -57,7 +59,13 @@ Usage of deployster:
 
 ### Notes
 
+* This project is also available as `bmorton/deployster` publicly on the [Docker Hub Registry][deployster-docker-hub].
 * For authenticating with the public Docker Hub Registry, follow [this CoreOS guide][registry-authentication].
+
+
+### Disclaimer
+
+Currently this project is in use for a few side projects, but is not in heavy production use.  At this point it's experimental and feedback is very welcomed and appreciated.  [Yammer][yammer] has been exploring a similar path for production and this will be used in prototyping.
 
 
 ### Contributing
@@ -75,6 +83,7 @@ Code and documentation copyright 2015 Brian Morton. Code released under the MIT 
 [running-rails-migrations]: http://guides.rubyonrails.org/active_record_migrations.html#running-migrations
 [digitalocean]: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-coreos-cluster-on-digitalocean
 [azure]: https://coreos.com/docs/running-coreos/cloud-providers/azure
+[12-factor-processes]: http://12factor.net/processes
 [zero-downtime]: https://coreos.com/blog/zero-downtime-frontend-deploys-vulcand/
 [etcd]: https://github.com/coreos/etcd
 [consul]: https://www.consul.io
