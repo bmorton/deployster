@@ -1,18 +1,16 @@
 package server
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"strconv"
-	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/templates"
 	"github.com/coreos/fleet/schema"
-	"github.com/coreos/fleet/unit"
 )
 
 const (
@@ -46,15 +44,6 @@ type Deploy struct {
 	DestroyPrevious bool   `json:"destroy_previous"`
 	Timestamp       string `json:"timestamp,omitempty"`
 	InstanceCount   int    `json:"instance_count,omitempty"`
-}
-
-// UnitTemplate is the view model that is passed to the template parser that
-// renders a unit file.
-type UnitTemplate struct {
-	Name        string
-	Version     string
-	ImagePrefix string
-	Timestamp   string
 }
 
 // Create is the POST endpoint for kicking off a new deployment of the service
@@ -142,7 +131,8 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 // startUnits is a helper function for ensuring that Fleet has all the units
 // configured and for launching those units.
 func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instanceCount int) error {
-	options := getUnitOptions(UnitTemplate{serviceName, version, dr.ImagePrefix, timestamp})
+	unitTemplate := &templates.Unit{serviceName, version, dr.ImagePrefix, timestamp}
+	options := unitTemplate.Options(templates.VulcandService())
 
 	// Make sure all units exist before we start setting their target states
 	for i := 1; i <= instanceCount; i++ {
@@ -180,18 +170,6 @@ func determineNumberOfInstances(instanceCount int, numberOfVersions int, numberO
 	} else {
 		return 1
 	}
-}
-
-// getUnitOptions renders the unit file and converts it to an array of
-// UnitOption structs.
-func getUnitOptions(unitViewTemplate UnitTemplate) []*schema.UnitOption {
-	var unitTemplate bytes.Buffer
-	t, _ := template.New("test").Parse(dockerUnitTemplate)
-	t.Execute(&unitTemplate, unitViewTemplate)
-
-	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
-
-	return schema.MapUnitFileToSchemaUnitOptions(unitFile)
 }
 
 // fleetServiceName generates a fleet unit name with the service name, version,
