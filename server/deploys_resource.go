@@ -79,7 +79,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		return http.StatusInternalServerError, nil, nil, err
 	}
 
-	previousVersions := FindServiceVersions(serviceName, units)
+	previousVersions := FindTimestampedServiceVersions(serviceName, units)
 	previousUnits := FindServiceUnits(serviceName, "", units)
 
 	if req.Deploy.DestroyPrevious {
