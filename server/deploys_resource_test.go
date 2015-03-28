@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bmorton/deployster/events"
 	"github.com/bmorton/deployster/server/mocks"
 	"github.com/coreos/fleet/schema"
 	"github.com/rcrowley/go-tigertonic/mocking"
@@ -24,7 +25,7 @@ func (suite *DeploysResourceTestSuite) SetupSuite() {
 
 func (suite *DeploysResourceTestSuite) SetupTest() {
 	suite.FleetClientMock = new(mocks.FleetClient)
-	suite.Subject = DeploysResource{suite.FleetClientMock, "mmmhm"}
+	suite.Subject = DeploysResource{Fleet: suite.FleetClientMock, ImagePrefix: "mmmhm", Emitter: events.NewEmitter()}
 }
 
 func (suite *DeploysResourceTestSuite) TestCreateWithoutPassedInstancesAndNoInstancesRunning() {

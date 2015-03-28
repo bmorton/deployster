@@ -11,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/events"
 	"github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
 )
@@ -30,6 +31,7 @@ const (
 // deployments of services.
 type DeploysResource struct {
 	Fleet       FleetClient
+	Emitter     *events.Emitter
 	ImagePrefix string
 }
 
@@ -100,6 +102,14 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 	}
 
 	instanceCount := determineNumberOfInstances(req.Deploy.InstanceCount, len(previousVersions), len(previousUnits))
+	event := &events.DeployEvent{
+		Type:          "started",
+		ServiceName:   serviceName,
+		Version:       req.Deploy.Version,
+		Timestamp:     req.Deploy.Timestamp,
+		InstanceCount: instanceCount,
+	}
+	dr.Emitter.Emit(event)
 	err = dr.startUnits(serviceName, req.Deploy.Version, req.Deploy.Timestamp, instanceCount)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
