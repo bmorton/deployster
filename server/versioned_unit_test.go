@@ -70,7 +70,7 @@ func (suite *VersionedUnitTestSuite) TestFindTimestampedServiceVersionsWithOneVe
 
 	found := FindTimestampedServiceVersions("carousel", units)
 	expected := []string{"efefeff:2006.01.02-15.04.05", "efefeff:2007.01.02-15.04.05"}
-	assert.Equal(suite.T(), expected, found)
+	assert.Contains(suite.T(), found, expected[0], expected[1])
 }
 
 func (suite *VersionedUnitTestSuite) TestFindTimestampedServiceVersionsWithMultipleVersions() {
@@ -81,7 +81,7 @@ func (suite *VersionedUnitTestSuite) TestFindTimestampedServiceVersionsWithMulti
 
 	found := FindTimestampedServiceVersions("carousel", units)
 	expected := []string{"efefeff:2006.01.02-15.04.05", "abababb:2006.01.02-15.04.05"}
-	assert.Equal(suite.T(), expected, found)
+	assert.Contains(suite.T(), found, expected[0], expected[1])
 }
 
 func TestVersionedUnitTestSuite(t *testing.T) {
