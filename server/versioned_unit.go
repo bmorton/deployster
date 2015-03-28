@@ -1,6 +1,10 @@
 package server
 
-import "github.com/coreos/fleet/schema"
+import (
+	"fmt"
+
+	"github.com/coreos/fleet/schema"
+)
 
 // VersionedUnit is our representation of a Fleet unit.  Largely, the difference
 // is that Fleet units don't care about versioning, so this lets us bridge the
@@ -50,18 +54,19 @@ func FindServiceUnits(serviceName string, version string, units []*schema.Unit) 
 	return versionedUnits
 }
 
-// FindServiceUnits parses an array of units returned from fleet and collects
-// all the versions present for the given service.  This doesn't currently look
-// at the state of the units, it simply looks for matching service names and
-// returns an array of all the unique versions found.
-func FindServiceVersions(serviceName string, units []*schema.Unit) []string {
+// FindTimestampedServiceVersions parses an array of units returned from fleet
+// and collects all the version:timestamp combinations present for the given
+// service.  This doesn't currently look at the state of the units, it simply
+// looks for matching service names and returns an array of all the unique
+// version:timestamp combinations found.
+func FindTimestampedServiceVersions(serviceName string, units []*schema.Unit) []string {
 	uniqueVersions := make(map[string]bool)
 
 	for _, u := range units {
 		dereferencedUnit := *u
 		extractable := ExtractableUnit(dereferencedUnit)
 		if extractable.IsManaged() && extractable.ExtractBaseName() == serviceName {
-			uniqueVersions[extractable.ExtractVersion()] = true
+			uniqueVersions[fmt.Sprintf("%s:%s", extractable.ExtractVersion(), extractable.ExtractTimestamp())] = true
 		}
 	}
 

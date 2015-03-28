@@ -1,3 +1,10 @@
+## v0.4.0 - unreleased
+
+Fixes:
+
+  * Fixed incorrect default instance count in some cases ([#50][issue-50])
+
+
 ## v0.3.0 - March 8th, 2015
 
 Features:
@@ -45,3 +52,4 @@ Features:
 [issue-29]: https://github.com/bmorton/deployster/pull/29
 [issue-30]: https://github.com/bmorton/deployster/pull/30
 [issue-39]: https://github.com/bmorton/deployster/pull/39
+[issue-50]: https://github.com/bmorton/deployster/pull/50
