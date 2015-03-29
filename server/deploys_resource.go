@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -39,15 +38,6 @@ type DeployRequest struct {
 	Deploy Deploy `json:"deploy"`
 }
 
-// Deploy is the struct that defines all the options for creating a new deploy
-// and is wrapped by DeployRequest and deserialized in the Create function.
-type Deploy struct {
-	Version         string `json:"version"`
-	DestroyPrevious bool   `json:"destroy_previous"`
-	Timestamp       string `json:"timestamp,omitempty"`
-	InstanceCount   int    `json:"instance_count,omitempty"`
-}
-
 // UnitTemplate is the view model that is passed to the template parser that
 // renders a unit file.
 type UnitTemplate struct {
@@ -67,7 +57,7 @@ type UnitTemplate struct {
 // and that Tigertonic is extracting the service name and providing it via query
 // params.
 func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest) (int, http.Header, interface{}, error) {
-	serviceName := u.Query().Get("name")
+	req.Deploy.ServiceName = u.Query().Get("name")
 
 	if req.Deploy.Timestamp == "" {
 		req.Deploy.Timestamp = time.Now().UTC().Format("2006.01.02-15.04.05")
@@ -79,8 +69,8 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		return http.StatusInternalServerError, nil, nil, err
 	}
 
-	previousVersions := FindTimestampedServiceVersions(serviceName, units)
-	previousUnits := FindServiceUnits(serviceName, "", units)
+	previousVersions := FindTimestampedServiceVersions(req.Deploy.ServiceName, units)
+	previousUnits := FindServiceUnits(req.Deploy.ServiceName, "", units)
 
 	if req.Deploy.DestroyPrevious {
 		if len(previousVersions) > 1 {
@@ -92,15 +82,15 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		}
 
 		for _, unit := range previousUnits {
-			rangeFleetName := fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance)
-			newFleetName := fleetServiceName(serviceName, req.Deploy.Version, req.Deploy.Timestamp, unit.Instance)
-			log.Printf("Launching watcher for %s.\n", rangeFleetName)
-			go dr.destroyPrevious(rangeFleetName, newFleetName, destroyPreviousCheckDelay)
+			oldInstance := &ServiceInstance{Name: req.Deploy.ServiceName, Version: unit.Version, Timestamp: unit.Timestamp, Instance: unit.Instance}
+			newInstance := req.Deploy.ServiceInstance(unit.Instance)
+			log.Printf("Launching watcher for %s.\n", oldInstance.FleetUnitName())
+			go dr.destroyPrevious(oldInstance.FleetUnitName(), newInstance.FleetUnitName(), destroyPreviousCheckDelay)
 		}
 	}
 
-	instanceCount := determineNumberOfInstances(req.Deploy.InstanceCount, len(previousVersions), len(previousUnits))
-	err = dr.startUnits(serviceName, req.Deploy.Version, req.Deploy.Timestamp, instanceCount)
+	req.Deploy.InstanceCount = determineNumberOfInstances(req.Deploy.InstanceCount, len(previousVersions), len(previousUnits))
+	err = dr.startUnits(&req.Deploy)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -117,19 +107,23 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
 // service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
-	serviceName := u.Query().Get("name")
-	version := u.Query().Get("version")
+	deploy := &Deploy{
+		ServiceName: u.Query().Get("name"),
+		Version:     u.Query().Get("version"),
+	}
 
 	units, err := dr.Fleet.Units()
 	if err != nil {
 		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	serviceUnits := FindServiceUnits(serviceName, version, units)
+	serviceUnits := FindServiceUnits(deploy.ServiceName, deploy.Version, units)
 
 	for _, unit := range serviceUnits {
 		if shouldDestroyUnit(u.Query().Get("timestamp"), unit.Timestamp) {
-			err := dr.Fleet.DestroyUnit(fleetServiceName(serviceName, unit.Version, unit.Timestamp, unit.Instance))
+			instance := deploy.ServiceInstance(unit.Instance)
+			instance.Timestamp = unit.Timestamp
+			err := dr.Fleet.DestroyUnit(instance.FleetUnitName())
 			if err != nil {
 				return http.StatusInternalServerError, nil, nil, err
 			}
@@ -141,24 +135,24 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 
 // startUnits is a helper function for ensuring that Fleet has all the units
 // configured and for launching those units.
-func (dr *DeploysResource) startUnits(serviceName string, version string, timestamp string, instanceCount int) error {
-	options := getUnitOptions(UnitTemplate{serviceName, version, dr.ImagePrefix, timestamp})
+func (dr *DeploysResource) startUnits(deploy *Deploy) error {
+	options := getUnitOptions(UnitTemplate{deploy.ServiceName, deploy.Version, dr.ImagePrefix, deploy.Timestamp})
 
 	// Make sure all units exist before we start setting their target states
-	for i := 1; i <= instanceCount; i++ {
-		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
-		log.Printf("Creating %s.\n", fleetUnit)
-		err := dr.Fleet.CreateUnit(&schema.Unit{Name: fleetUnit, Options: options})
+	for i := 1; i <= deploy.InstanceCount; i++ {
+		instance := deploy.ServiceInstance(strconv.Itoa(i))
+		log.Printf("Creating %s.\n", instance.FleetUnitName())
+		err := dr.Fleet.CreateUnit(&schema.Unit{Name: instance.FleetUnitName(), Options: options})
 		if err != nil {
 			return err
 		}
 	}
 
 	// Now that all the units exist, we can launch each of them
-	for i := 1; i <= instanceCount; i++ {
-		fleetUnit := fleetServiceName(serviceName, version, timestamp, strconv.Itoa(i))
-		log.Printf("Launching %s.\n", fleetUnit)
-		err := dr.Fleet.SetUnitTargetState(fleetUnit, "launched")
+	for i := 1; i <= deploy.InstanceCount; i++ {
+		instance := deploy.ServiceInstance(strconv.Itoa(i))
+		log.Printf("Launching %s.\n", instance.FleetUnitName())
+		err := dr.Fleet.SetUnitTargetState(instance.FleetUnitName(), "launched")
 		if err != nil {
 			return err
 		}
@@ -192,12 +186,6 @@ func getUnitOptions(unitViewTemplate UnitTemplate) []*schema.UnitOption {
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 
 	return schema.MapUnitFileToSchemaUnitOptions(unitFile)
-}
-
-// fleetServiceName generates a fleet unit name with the service name, version,
-// and instance encoded within it.
-func fleetServiceName(name string, version string, timestamp string, instance string) string {
-	return fmt.Sprintf("%s:%s:%s@%s.service", name, version, timestamp, instance)
 }
 
 // shouldDestroyUnit takes an optional timestamp (from the query string) and, if
