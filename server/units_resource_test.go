@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bmorton/deployster/server/mocks"
+	"github.com/bmorton/deployster/units"
 	"github.com/coreos/fleet/schema"
 	"github.com/rcrowley/go-tigertonic/mocking"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoResults() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 200, code)
-	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{}}, response)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []units.VersionedUnit{}}, response)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
@@ -52,7 +53,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNoMatchingResultsForService() 
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 200, code)
-	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{}}, response)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []units.VersionedUnit{}}, response)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
@@ -67,7 +68,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithMatchingResultsForService() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 200, code)
-	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2006.01.02-15.04.05"}}}, response)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []units.VersionedUnit{units.VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2006.01.02-15.04.05"}}}, response)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
@@ -85,7 +86,7 @@ func (suite *UnitsResourceTestSuite) TestIndexWithNonDeploysterManagedUnits() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), 200, code)
-	assert.Equal(suite.T(), &UnitsResponse{Units: []VersionedUnit{VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2006.01.02-15.04.05"}}}, response)
+	assert.Equal(suite.T(), &UnitsResponse{Units: []units.VersionedUnit{units.VersionedUnit{Service: "carousel", Instance: "1", Version: "efefeff", CurrentState: "running", DesiredState: "running", MachineID: "abc123", Timestamp: "2006.01.02-15.04.05"}}}, response)
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 

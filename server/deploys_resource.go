@@ -10,6 +10,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/units"
 	"github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
 )
@@ -63,14 +64,14 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 		req.Deploy.Timestamp = time.Now().UTC().Format("2006.01.02-15.04.05")
 	}
 
-	units, err := dr.Fleet.Units()
+	allUnits, err := dr.Fleet.Units()
 	if err != nil {
 		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
 
-	previousVersions := FindTimestampedServiceVersions(req.Deploy.ServiceName, units)
-	previousUnits := FindServiceUnits(req.Deploy.ServiceName, "", units)
+	previousVersions := units.FindTimestampedServiceVersions(req.Deploy.ServiceName, allUnits)
+	previousUnits := units.FindServiceUnits(req.Deploy.ServiceName, "", allUnits)
 
 	if req.Deploy.DestroyPrevious {
 		if len(previousVersions) > 1 {
@@ -112,12 +113,12 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 		Version:     u.Query().Get("version"),
 	}
 
-	units, err := dr.Fleet.Units()
+	allUnits, err := dr.Fleet.Units()
 	if err != nil {
 		log.Println(err)
 		return http.StatusInternalServerError, nil, nil, err
 	}
-	serviceUnits := FindServiceUnits(deploy.ServiceName, deploy.Version, units)
+	serviceUnits := units.FindServiceUnits(deploy.ServiceName, deploy.Version, allUnits)
 
 	for _, unit := range serviceUnits {
 		if shouldDestroyUnit(u.Query().Get("timestamp"), unit.Timestamp) {
