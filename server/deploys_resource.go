@@ -10,21 +10,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/handlers"
+	"github.com/bmorton/deployster/poller"
 	"github.com/bmorton/deployster/schema"
 	"github.com/bmorton/deployster/units"
 	fleet "github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
-)
-
-const (
-	// destroyPreviousCheckTimeout is the amount of time to attempt checking for
-	// the new version of the service to boot.  If checking exceeds this time, the
-	// previous version will not be destroyed.
-	destroyPreviousCheckTimeout time.Duration = 5 * time.Minute
-
-	// destroyPreviousCheckDelay is the amount of to wait between checks for the
-	// boot completion of the new version.
-	destroyPreviousCheckDelay time.Duration = 1 * time.Second
 )
 
 // DeploysResource is the HTTP resource responsible for creating and destroying
@@ -83,11 +74,15 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 			return http.StatusBadRequest, nil, nil, errors.New("A greater number of instances than what was specified is already running.  Make sure this number is less than or equal to the number already running or disable destroying previous units.")
 		}
 
-		for _, unit := range previousUnits {
-			oldInstance := &ServiceInstance{Name: req.Deploy.ServiceName, Version: unit.Version, Timestamp: unit.Timestamp, Instance: unit.Instance}
-			newInstance := req.Deploy.ServiceInstance(unit.Instance)
-			log.Printf("Launching watcher for %s.\n", oldInstance.FleetUnitName())
-			go dr.destroyPrevious(oldInstance.FleetUnitName(), newInstance.FleetUnitName(), destroyPreviousCheckDelay)
+		if len(previousVersions) == 1 {
+			req.Deploy.PreviousVersion = &schema.Deploy{
+				ServiceName:   req.Deploy.ServiceName,
+				Version:       previousUnits[0].Version,
+				Timestamp:     previousUnits[0].Timestamp,
+				InstanceCount: len(previousUnits),
+			}
+		} else {
+			req.Deploy.DestroyPrevious = false
 		}
 	}
 
@@ -140,7 +135,6 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 	options := getUnitOptions(UnitTemplate{deploy.ServiceName, deploy.Version, dr.ImagePrefix, deploy.Timestamp})
 
-	// Make sure all units exist before we start setting their target states
 	for i := 1; i <= deploy.InstanceCount; i++ {
 		instance := deploy.ServiceInstance(strconv.Itoa(i))
 		log.Printf("Creating %s.\n", instance.FleetUnitName())
@@ -148,16 +142,17 @@ func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 		if err != nil {
 			return err
 		}
-	}
 
-	// Now that all the units exist, we can launch each of them
-	for i := 1; i <= deploy.InstanceCount; i++ {
-		instance := deploy.ServiceInstance(strconv.Itoa(i))
 		log.Printf("Launching %s.\n", instance.FleetUnitName())
-		err := dr.Fleet.SetUnitTargetState(instance.FleetUnitName(), "launched")
+		err = dr.Fleet.SetUnitTargetState(instance.FleetUnitName(), "launched")
 		if err != nil {
 			return err
 		}
+
+		log.Printf("Polling %s.\n", instance.FleetUnitName())
+		poller := poller.New(instance, dr.Fleet)
+		poller.AddSuccessHandler(&handlers.DestroyHandler{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
+		go poller.Watch()
 	}
 
 	return nil
@@ -201,51 +196,4 @@ func shouldDestroyUnit(blankOrTimestampToMatch string, unitTimestamp string) boo
 		return true
 	}
 	return false
-}
-
-// destroyPrevious is responsible for watching for a new version of a service to
-// complete launching on the `destroyPreviousCheckDelay` interval so that it can
-// fire off a request to destroy the previous version.  If this doesn't complete
-// before the destroyPreviousCheckTimeout, the attempt will be abandoned.
-func (dr *DeploysResource) destroyPrevious(previousFleetUnit string, currentFleetUnit string, checkDelay time.Duration) {
-	timeoutChan := make(chan bool, 1)
-
-	go func() {
-		time.Sleep(destroyPreviousCheckTimeout)
-		timeoutChan <- true
-	}()
-
-	for {
-		startCheck := time.After(checkDelay)
-
-		select {
-		case <-startCheck:
-			log.Printf("Checking if %s has finished launching...\n", currentFleetUnit)
-			states, err := dr.Fleet.UnitStates()
-			if err != nil {
-				log.Println(err)
-				break
-			}
-			for _, state := range states {
-				if state.Name == currentFleetUnit {
-					if state.SystemdSubState == "running" {
-						log.Printf("%s has launched, destroying %s.\n", currentFleetUnit, previousFleetUnit)
-						err := dr.Fleet.DestroyUnit(previousFleetUnit)
-						if err != nil {
-							log.Println(err)
-						}
-						return
-					}
-					if state.SystemdSubState == "failed" {
-						log.Printf("%s failed to launch, bailing out.\n", currentFleetUnit)
-						return
-					}
-					log.Printf("%s isn't running (currently %s).  Trying again in %s.\n", currentFleetUnit, state.SystemdSubState, destroyPreviousCheckDelay)
-				}
-			}
-		case <-timeoutChan:
-			log.Printf("Timed out trying to destroy %s after %s.\n", previousFleetUnit, destroyPreviousCheckTimeout)
-			return
-		}
-	}
 }

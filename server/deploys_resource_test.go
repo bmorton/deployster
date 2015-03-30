@@ -177,18 +177,6 @@ func (suite *DeploysResourceTestSuite) TestCreateWithDestroyPreviousAndTooManyVe
 	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
 }
 
-func (suite *DeploysResourceTestSuite) TestDestroyPrevious() {
-	mockedStates := []*schema.UnitState{
-		&schema.UnitState{"", "", "carousel:cccddd:2006.01.02-15.04.05@1.service", "", "", "running"},
-	}
-	suite.FleetClientMock.On("UnitStates").Return(mockedStates, nil)
-	suite.FleetClientMock.On("DestroyUnit", "carousel:abc123:2006.01.02-15.04.05@1.service").Return(nil)
-
-	suite.Subject.destroyPrevious("carousel:abc123:2006.01.02-15.04.05@1.service", "carousel:cccddd:2006.01.02-15.04.05@1.service", 0)
-
-	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
-}
-
 func (suite *DeploysResourceTestSuite) TestDestroySingleInstance() {
 	suite.FleetClientMock.On("Units").Return([]*fleet.Unit{&fleet.Unit{"running", "running", "efefeff", "carousel:efefeff:2006.01.02-15.04.05@1.service", []*fleet.UnitOption{}}}, nil)
 	suite.FleetClientMock.On("DestroyUnit", "carousel:efefeff:2006.01.02-15.04.05@1.service").Return(nil)
