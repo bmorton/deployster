@@ -10,8 +10,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/schema"
 	"github.com/bmorton/deployster/units"
-	"github.com/coreos/fleet/schema"
+	fleet "github.com/coreos/fleet/schema"
 	"github.com/coreos/fleet/unit"
 )
 
@@ -36,7 +37,7 @@ type DeploysResource struct {
 // DeployRequest is the wrapper struct used to deserialize the JSON payload that
 // is sent for creating a new deploy.
 type DeployRequest struct {
-	Deploy Deploy `json:"deploy"`
+	Deploy *schema.Deploy `json:"deploy"`
 }
 
 // UnitTemplate is the view model that is passed to the template parser that
@@ -91,7 +92,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 	}
 
 	req.Deploy.InstanceCount = determineNumberOfInstances(req.Deploy.InstanceCount, len(previousVersions), len(previousUnits))
-	err = dr.startUnits(&req.Deploy)
+	err = dr.startUnits(req.Deploy)
 	if err != nil {
 		return http.StatusInternalServerError, nil, nil, err
 	}
@@ -108,7 +109,7 @@ func (dr *DeploysResource) Create(u *url.URL, h http.Header, req *DeployRequest)
 // `/services/{name}/versions/{version}` and that Tigertonic is extracting the
 // service name/version and providing it via query params.
 func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (int, http.Header, interface{}, error) {
-	deploy := &Deploy{
+	deploy := &schema.Deploy{
 		ServiceName: u.Query().Get("name"),
 		Version:     u.Query().Get("version"),
 	}
@@ -136,14 +137,14 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 
 // startUnits is a helper function for ensuring that Fleet has all the units
 // configured and for launching those units.
-func (dr *DeploysResource) startUnits(deploy *Deploy) error {
+func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 	options := getUnitOptions(UnitTemplate{deploy.ServiceName, deploy.Version, dr.ImagePrefix, deploy.Timestamp})
 
 	// Make sure all units exist before we start setting their target states
 	for i := 1; i <= deploy.InstanceCount; i++ {
 		instance := deploy.ServiceInstance(strconv.Itoa(i))
 		log.Printf("Creating %s.\n", instance.FleetUnitName())
-		err := dr.Fleet.CreateUnit(&schema.Unit{Name: instance.FleetUnitName(), Options: options})
+		err := dr.Fleet.CreateUnit(&fleet.Unit{Name: instance.FleetUnitName(), Options: options})
 		if err != nil {
 			return err
 		}
@@ -179,14 +180,14 @@ func determineNumberOfInstances(instanceCount int, numberOfVersions int, numberO
 
 // getUnitOptions renders the unit file and converts it to an array of
 // UnitOption structs.
-func getUnitOptions(unitViewTemplate UnitTemplate) []*schema.UnitOption {
+func getUnitOptions(unitViewTemplate UnitTemplate) []*fleet.UnitOption {
 	var unitTemplate bytes.Buffer
 	t, _ := template.New("test").Parse(dockerUnitTemplate)
 	t.Execute(&unitTemplate, unitViewTemplate)
 
 	unitFile, _ := unit.NewUnitFile(unitTemplate.String())
 
-	return schema.MapUnitFileToSchemaUnitOptions(unitFile)
+	return fleet.MapUnitFileToSchemaUnitOptions(unitFile)
 }
 
 // shouldDestroyUnit takes an optional timestamp (from the query string) and, if

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/coreos/fleet/schema"
+	fleet "github.com/coreos/fleet/schema"
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -16,9 +16,9 @@ type DockerClient interface {
 }
 
 type FleetClient interface {
-	Units() ([]*schema.Unit, error)
-	CreateUnit(*schema.Unit) error
+	Units() ([]*fleet.Unit, error)
+	CreateUnit(*fleet.Unit) error
 	DestroyUnit(string) error
-	UnitStates() ([]*schema.UnitState, error)
+	UnitStates() ([]*fleet.UnitState, error)
 	SetUnitTargetState(string, string) error
 }
