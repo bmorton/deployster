@@ -21,6 +21,10 @@ const (
 	defaultDelay time.Duration = 1 * time.Second
 )
 
+type Handler interface {
+	Handle(*fleet.UnitState)
+}
+
 type UnitPoller struct {
 	ServiceInstance *schema.ServiceInstance
 	Timeout         time.Duration
