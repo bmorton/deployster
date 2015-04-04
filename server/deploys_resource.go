@@ -135,6 +135,11 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 	options := getUnitOptions(UnitTemplate{deploy.ServiceName, deploy.Version, dr.ImagePrefix, deploy.Timestamp})
 
+	log.Printf("Polling %s:%s.\n", deploy.ServiceName, deploy.Version)
+	poller := poller.New(deploy, dr.Fleet)
+	poller.AddSuccessHandler(&handlers.DestroyHandler{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
+	go poller.Watch()
+
 	for i := 1; i <= deploy.InstanceCount; i++ {
 		instance := deploy.ServiceInstance(strconv.Itoa(i))
 		log.Printf("Creating %s.\n", instance.FleetUnitName())
@@ -148,11 +153,6 @@ func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 		if err != nil {
 			return err
 		}
-
-		log.Printf("Polling %s.\n", instance.FleetUnitName())
-		poller := poller.New(instance, dr.Fleet)
-		poller.AddSuccessHandler(&handlers.DestroyHandler{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
-		go poller.Watch()
 	}
 
 	return nil
