@@ -5,8 +5,6 @@ import (
 
 	"github.com/bmorton/deployster/poller"
 	"github.com/bmorton/deployster/schema"
-	"github.com/bmorton/deployster/units"
-	fleet "github.com/coreos/fleet/schema"
 )
 
 type DestroyHandler struct {
@@ -14,10 +12,9 @@ type DestroyHandler struct {
 	Client          poller.FleetClient
 }
 
-func (d *DestroyHandler) Handle(unit *fleet.UnitState) {
+func (d *DestroyHandler) Handle(event *poller.Event) {
 	log.Println("handling destroy!")
-	launched := &units.ExtractableUnit{Name: unit.Name}
-	err := d.Client.DestroyUnit(d.PreviousVersion.ServiceInstance(launched.ExtractInstance()).FleetUnitName())
+	err := d.Client.DestroyUnit(d.PreviousVersion.ServiceInstance(event.ServiceInstance.Instance).FleetUnitName())
 	if err != nil {
 		log.Println(err)
 	}

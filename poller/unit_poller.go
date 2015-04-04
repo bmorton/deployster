@@ -22,7 +22,7 @@ const (
 )
 
 type Handler interface {
-	Handle(*fleet.UnitState)
+	Handle(*Event)
 }
 
 type UnitPoller struct {
@@ -31,9 +31,9 @@ type UnitPoller struct {
 	Delay           time.Duration
 	client          FleetClient
 	stopChan        chan string
-	successChan     chan *fleet.UnitState
-	failureChan     chan *fleet.UnitState
-	unresolvedChan  chan *fleet.UnitState
+	successChan     chan *Event
+	failureChan     chan *Event
+	unresolvedChan  chan *Event
 	successHandlers []Handler
 }
 
@@ -43,9 +43,9 @@ func New(serviceInstance *schema.ServiceInstance, client FleetClient) *UnitPolle
 		Timeout:         defaultTimeout,
 		Delay:           defaultDelay,
 		stopChan:        make(chan string, 1),
-		successChan:     make(chan *fleet.UnitState, 1),
-		failureChan:     make(chan *fleet.UnitState, 1),
-		unresolvedChan:  make(chan *fleet.UnitState, 1),
+		successChan:     make(chan *Event, 1),
+		failureChan:     make(chan *Event, 1),
+		unresolvedChan:  make(chan *Event, 1),
 		client:          client,
 	}
 }
@@ -83,45 +83,45 @@ func (p *UnitPoller) AddSuccessHandler(newHandler Handler) {
 	p.successHandlers = append(p.successHandlers, newHandler)
 }
 
-func (p *UnitPoller) runSuccessHandlers(unit *fleet.UnitState) {
+func (p *UnitPoller) runSuccessHandlers(event *Event) {
 	for _, h := range p.successHandlers {
-		h.Handle(unit)
+		h.Handle(event)
 	}
 	return
 }
 
 func (p *UnitPoller) handleStatus() {
 	log.Printf("Checking if %s has finished launching...\n", p.ServiceInstance.FleetUnitName())
-	unit, err := p.fetchStatus()
+	event, err := p.fetchStatus()
 	if err != nil {
 		log.Println(err)
-		p.unresolvedChan <- unit
+		p.unresolvedChan <- event
 		return
 	}
 
-	switch unit.SystemdSubState {
+	switch event.SystemdSubState {
 	case "running":
-		p.successChan <- unit
+		p.successChan <- event
 	case "failed":
-		p.failureChan <- unit
+		p.failureChan <- event
 	default:
-		p.unresolvedChan <- unit
+		p.unresolvedChan <- event
 	}
 
 	return
 }
 
-func (p *UnitPoller) fetchStatus() (*fleet.UnitState, error) {
+func (p *UnitPoller) fetchStatus() (*Event, error) {
 	states, err := p.client.UnitStates()
 	if err != nil {
-		return &fleet.UnitState{}, err
+		return NewEvent(p.ServiceInstance, &fleet.UnitState{}), err
 	}
 
 	for _, state := range states {
 		if state.Name == p.ServiceInstance.FleetUnitName() {
-			return state, nil
+			return NewEvent(p.ServiceInstance, state), nil
 		}
 	}
 
-	return &fleet.UnitState{}, errors.New("Unit state couldn't be determined")
+	return NewEvent(p.ServiceInstance, &fleet.UnitState{}), errors.New("Unit state couldn't be determined")
 }

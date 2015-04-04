@@ -15,7 +15,7 @@ type MockSuccessHandler struct {
 	called bool
 }
 
-func (m *MockSuccessHandler) Handle(s *fleet.UnitState) {
+func (m *MockSuccessHandler) Handle(e *Event) {
 	m.called = true
 }
 
