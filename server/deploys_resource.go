@@ -137,7 +137,7 @@ func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 
 	log.Printf("Polling %s:%s.\n", deploy.ServiceName, deploy.Version)
 	poller := poller.New(deploy, dr.Fleet)
-	poller.AddSuccessHandler(&handlers.DestroyHandler{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
+	poller.AddSuccessHandler(&handlers.Destroyer{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
 	go poller.Watch()
 
 	for i := 1; i <= deploy.InstanceCount; i++ {

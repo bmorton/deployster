@@ -116,6 +116,6 @@ func (suite *PollerTestSuite) expectedForStates(states map[string]string) []*fle
 	return generated
 }
 
-func TestUnitsResourceTestSuite(t *testing.T) {
+func TestPollerTestSuite(t *testing.T) {
 	suite.Run(t, new(PollerTestSuite))
 }
