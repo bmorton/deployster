@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bmorton/deployster/server/mocks"
+	"github.com/bmorton/deployster/clients/mocks"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,9 +16,9 @@ import (
 
 type TasksResourceTestSuite struct {
 	suite.Suite
-	Subject          TasksResource
-	DockerClientMock *mocks.DockerClient
-	Service          *DeploysterService
+	Subject    TasksResource
+	DockerMock *mocks.Docker
+	Service    *DeploysterService
 }
 
 var validRequestBody []byte = []byte(`{"task":{"version":"abc123", "command":"bundle exec rake db:migrate"}}`)
@@ -28,8 +28,8 @@ func (suite *TasksResourceTestSuite) SetupSuite() {
 }
 
 func (suite *TasksResourceTestSuite) SetupTest() {
-	suite.DockerClientMock = new(mocks.DockerClient)
-	suite.Subject = TasksResource{suite.DockerClientMock, "mmmhm"}
+	suite.DockerMock = new(mocks.Docker)
+	suite.Subject = TasksResource{suite.DockerMock, "mmmhm"}
 }
 
 func (suite *TasksResourceTestSuite) TestCreateTellsDockerToCreateContainer() {
@@ -40,7 +40,7 @@ func (suite *TasksResourceTestSuite) TestCreateTellsDockerToCreateContainer() {
 	w := httptest.NewRecorder()
 	suite.Subject.Create(w, req)
 
-	suite.DockerClientMock.Mock.AssertCalled(suite.T(), "CreateContainer", docker.CreateContainerOptions{
+	suite.DockerMock.Mock.AssertCalled(suite.T(), "CreateContainer", docker.CreateContainerOptions{
 		Name: "carousel-abc123-task",
 		Config: &docker.Config{
 			Image:        "mmmhm/carousel:abc123",
@@ -59,7 +59,7 @@ func (suite *TasksResourceTestSuite) TestCreateTellsDockerToStartContainer() {
 	w := httptest.NewRecorder()
 	suite.Subject.Create(w, req)
 
-	suite.DockerClientMock.Mock.AssertCalled(suite.T(), "StartContainer", "c0c0c0c0c0", &docker.HostConfig{})
+	suite.DockerMock.Mock.AssertCalled(suite.T(), "StartContainer", "c0c0c0c0c0", &docker.HostConfig{})
 }
 
 func (suite *TasksResourceTestSuite) TestCreateAttachesToContainer() {
@@ -71,7 +71,7 @@ func (suite *TasksResourceTestSuite) TestCreateAttachesToContainer() {
 	suite.Subject.Create(w, req)
 	fw := newFlushWriter(w)
 
-	suite.DockerClientMock.Mock.AssertCalled(suite.T(), "AttachToContainer", docker.AttachToContainerOptions{
+	suite.DockerMock.Mock.AssertCalled(suite.T(), "AttachToContainer", docker.AttachToContainerOptions{
 		Container:    "c0c0c0c0c0",
 		OutputStream: &fw,
 		ErrorStream:  &fw,
@@ -90,7 +90,7 @@ func (suite *TasksResourceTestSuite) TestCreateInspectsContainerForExitStatus() 
 	w := httptest.NewRecorder()
 	suite.Subject.Create(w, req)
 
-	suite.DockerClientMock.Mock.AssertCalled(suite.T(), "InspectContainer", "c0c0c0c0c0")
+	suite.DockerMock.Mock.AssertCalled(suite.T(), "InspectContainer", "c0c0c0c0c0")
 }
 
 func (suite *TasksResourceTestSuite) TestCreateIsSuccessfulWhenContainerStarted() {
@@ -105,8 +105,8 @@ func (suite *TasksResourceTestSuite) TestCreateIsSuccessfulWhenContainerStarted(
 }
 
 func (suite *TasksResourceTestSuite) TestCreateReturnsServerErrorWhenContainerFailsToStart() {
-	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c123d123bb"}, nil)
-	suite.DockerClientMock.On("StartContainer", "c123d123bb", &docker.HostConfig{}).Return(errors.New("failed"))
+	suite.DockerMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c123d123bb"}, nil)
+	suite.DockerMock.On("StartContainer", "c123d123bb", &docker.HostConfig{}).Return(errors.New("failed"))
 
 	req, _ := http.NewRequest("POST", "http://example.com/services/carousel/tasks?name=carousel", bytes.NewBuffer(validRequestBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -118,15 +118,15 @@ func (suite *TasksResourceTestSuite) TestCreateReturnsServerErrorWhenContainerFa
 }
 
 func (suite *TasksResourceTestSuite) TestCreateReturnsExitCodeOnSuccess() {
-	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
-	suite.DockerClientMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
-	suite.DockerClientMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
-	suite.DockerClientMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
+	suite.DockerMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
+	suite.DockerMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
+	suite.DockerMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
+	suite.DockerMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
 		State: docker.State{
 			ExitCode: 0,
 		},
 	}, nil)
-	suite.DockerClientMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
+	suite.DockerMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
 
 	req, _ := http.NewRequest("POST", "http://example.com/services/carousel/tasks?name=carousel", bytes.NewBuffer(validRequestBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -138,16 +138,16 @@ func (suite *TasksResourceTestSuite) TestCreateReturnsExitCodeOnSuccess() {
 }
 
 func (suite *TasksResourceTestSuite) TestCreateReturnsExitCodeOnFailure() {
-	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
-	suite.DockerClientMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
-	suite.DockerClientMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
-	suite.DockerClientMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
+	suite.DockerMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
+	suite.DockerMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
+	suite.DockerMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
+	suite.DockerMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{
 		State: docker.State{
 			ExitCode: 127,
 			Error:    "Something went wrong",
 		},
 	}, nil)
-	suite.DockerClientMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
+	suite.DockerMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
 
 	req, _ := http.NewRequest("POST", "http://example.com/services/carousel/tasks?name=carousel", bytes.NewBuffer(validRequestBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -163,9 +163,9 @@ func TestTasksResourceTestSuite(t *testing.T) {
 }
 
 func (suite *TasksResourceTestSuite) setupSuccessfulDockerMock() {
-	suite.DockerClientMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
-	suite.DockerClientMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
-	suite.DockerClientMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
-	suite.DockerClientMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{}, nil)
-	suite.DockerClientMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
+	suite.DockerMock.On("CreateContainer", mock.AnythingOfType("docker.CreateContainerOptions")).Return(&docker.Container{ID: "c0c0c0c0c0"}, nil)
+	suite.DockerMock.On("StartContainer", "c0c0c0c0c0", &docker.HostConfig{}).Return(nil)
+	suite.DockerMock.On("AttachToContainer", mock.AnythingOfType("docker.AttachToContainerOptions")).Return(nil)
+	suite.DockerMock.On("InspectContainer", "c0c0c0c0c0").Return(&docker.Container{}, nil)
+	suite.DockerMock.On("RemoveContainer", mock.AnythingOfType("docker.RemoveContainerOptions")).Return(nil)
 }

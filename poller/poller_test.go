@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmorton/deployster/clients/mocks"
 	"github.com/bmorton/deployster/schema"
-	"github.com/bmorton/deployster/server/mocks"
 	fleet "github.com/coreos/fleet/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -25,55 +25,55 @@ func (m *MockSuccessHandler) wasCalled() bool {
 
 type PollerTestSuite struct {
 	suite.Suite
-	Subject         *Poller
-	FleetClientMock *mocks.FleetClient
-	Deploy          *schema.Deploy
+	Subject   *Poller
+	FleetMock *mocks.Fleet
+	Deploy    *schema.Deploy
 }
 
 func (suite *PollerTestSuite) SetupTest() {
-	suite.FleetClientMock = new(mocks.FleetClient)
+	suite.FleetMock = new(mocks.Fleet)
 	suite.Deploy = &schema.Deploy{ServiceName: "railsapp", Version: "latest", InstanceCount: 1, Timestamp: "2006.01.02-15.04.05"}
-	suite.Subject = New(suite.Deploy, suite.FleetClientMock)
+	suite.Subject = New(suite.Deploy, suite.FleetMock)
 	suite.Subject.Timeout = 100 * time.Millisecond
 	suite.Subject.Delay = 0
 }
 
 func (suite *PollerTestSuite) TestSuccessHandlerCalledWhenStateRunning() {
 	handler := &MockSuccessHandler{}
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForState("running"), nil)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForState("running"), nil)
 
 	suite.Subject.AddSuccessHandler(handler)
 	suite.Subject.Watch()
 
-	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+	suite.FleetMock.Mock.AssertExpectations(suite.T())
 	assert.True(suite.T(), handler.wasCalled())
 }
 
 func (suite *PollerTestSuite) TestSuccessHandlerNotCalledWhenStateFailed() {
 	handler := &MockSuccessHandler{}
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForState("failed"), nil)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForState("failed"), nil)
 
 	suite.Subject.AddSuccessHandler(handler)
 	suite.Subject.Watch()
 
-	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+	suite.FleetMock.Mock.AssertExpectations(suite.T())
 	assert.False(suite.T(), handler.wasCalled())
 }
 
 func (suite *PollerTestSuite) TestPollsAgainWhenStateUnresolved() {
 	handler := &MockSuccessHandler{}
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForState("launching"), nil).Times(1)
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForState("running"), nil).Times(1)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForState("launching"), nil).Times(1)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForState("running"), nil).Times(1)
 
 	suite.Subject.AddSuccessHandler(handler)
 	suite.Subject.Watch()
 
-	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+	suite.FleetMock.Mock.AssertExpectations(suite.T())
 }
 
 func (suite *PollerTestSuite) TestPollsMultipleInstances() {
 	suite.Deploy.InstanceCount = 3
-	suite.Subject = New(suite.Deploy, suite.FleetClientMock)
+	suite.Subject = New(suite.Deploy, suite.FleetMock)
 	suite.Subject.Timeout = 100 * time.Millisecond
 	suite.Subject.Delay = 0
 
@@ -85,15 +85,15 @@ func (suite *PollerTestSuite) TestPollsMultipleInstances() {
 	states[suite.Deploy.ServiceInstance("1").FleetUnitName()] = "running"
 	states[suite.Deploy.ServiceInstance("2").FleetUnitName()] = "running"
 	states[suite.Deploy.ServiceInstance("3").FleetUnitName()] = "launching"
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForStates(states), nil).Times(1)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForStates(states), nil).Times(1)
 	states[suite.Deploy.ServiceInstance("3").FleetUnitName()] = "failed"
-	suite.FleetClientMock.On("UnitStates").Return(suite.expectedForStates(states), nil).Times(1)
+	suite.FleetMock.On("UnitStates").Return(suite.expectedForStates(states), nil).Times(1)
 
 	handler := &MockSuccessHandler{}
 	suite.Subject.AddSuccessHandler(handler)
 	suite.Subject.Watch()
 
-	suite.FleetClientMock.Mock.AssertExpectations(suite.T())
+	suite.FleetMock.Mock.AssertExpectations(suite.T())
 	assert.Equal(suite.T(), 2, handler.timesCalled)
 }
 

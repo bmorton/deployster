@@ -10,6 +10,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bmorton/deployster/clients"
 	"github.com/bmorton/deployster/handlers"
 	"github.com/bmorton/deployster/poller"
 	"github.com/bmorton/deployster/schema"
@@ -21,7 +22,7 @@ import (
 // DeploysResource is the HTTP resource responsible for creating and destroying
 // deployments of services.
 type DeploysResource struct {
-	Fleet       FleetClient
+	Fleet       clients.Fleet
 	ImagePrefix string
 }
 
@@ -135,10 +136,12 @@ func (dr *DeploysResource) Destroy(u *url.URL, h http.Header, req interface{}) (
 func (dr *DeploysResource) startUnits(deploy *schema.Deploy) error {
 	options := getUnitOptions(UnitTemplate{deploy.ServiceName, deploy.Version, dr.ImagePrefix, deploy.Timestamp})
 
-	log.Printf("Polling %s:%s.\n", deploy.ServiceName, deploy.Version)
-	poller := poller.New(deploy, dr.Fleet)
-	poller.AddSuccessHandler(&handlers.Destroyer{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
-	go poller.Watch()
+	if deploy.DestroyPrevious {
+		log.Printf("Polling %s:%s.\n", deploy.ServiceName, deploy.Version)
+		poller := poller.New(deploy, dr.Fleet)
+		poller.AddSuccessHandler(&handlers.Destroyer{PreviousVersion: deploy.PreviousVersion, Client: dr.Fleet})
+		go poller.Watch()
+	}
 
 	for i := 1; i <= deploy.InstanceCount; i++ {
 		instance := deploy.ServiceInstance(strconv.Itoa(i))

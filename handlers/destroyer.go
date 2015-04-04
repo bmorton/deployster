@@ -3,13 +3,14 @@ package handlers
 import (
 	"log"
 
+	"github.com/bmorton/deployster/clients"
 	"github.com/bmorton/deployster/poller"
 	"github.com/bmorton/deployster/schema"
 )
 
 type Destroyer struct {
 	PreviousVersion *schema.Deploy
-	Client          poller.FleetClient
+	Client          clients.Fleet
 }
 
 func (d *Destroyer) Handle(event *poller.Event) {

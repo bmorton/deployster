@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bmorton/deployster/clients"
 	"github.com/bmorton/deployster/schema"
 )
 
@@ -24,7 +25,7 @@ type Poller struct {
 	Deploy              *schema.Deploy
 	Timeout             time.Duration
 	Delay               time.Duration
-	client              FleetClient
+	client              clients.Fleet
 	stopChan            chan string
 	successChan         chan *Event
 	failureChan         chan *Event
@@ -33,7 +34,7 @@ type Poller struct {
 	unresolvedInstances map[string]*schema.ServiceInstance
 }
 
-func New(deploy *schema.Deploy, client FleetClient) *Poller {
+func New(deploy *schema.Deploy, client clients.Fleet) *Poller {
 	toBeResolved := make(map[string]*schema.ServiceInstance)
 	for i := 1; i <= deploy.InstanceCount; i++ {
 		instance := deploy.ServiceInstance(strconv.Itoa(i))

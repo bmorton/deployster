@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bmorton/deployster/clients"
 	"github.com/fsouza/go-dockerclient"
 )
 
@@ -16,7 +17,7 @@ import (
 // the image name to pull from the Docker Hub Registry so that the task can be
 // launched.
 type TasksResource struct {
-	Docker      DockerClient
+	Docker      clients.Docker
 	ImagePrefix string
 }
 

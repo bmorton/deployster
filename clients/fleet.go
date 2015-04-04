@@ -1,8 +1,8 @@
-package poller
+package clients
 
 import fleet "github.com/coreos/fleet/schema"
 
-type FleetClient interface {
+type Fleet interface {
 	Units() ([]*fleet.Unit, error)
 	CreateUnit(*fleet.Unit) error
 	DestroyUnit(string) error
