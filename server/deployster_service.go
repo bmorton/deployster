@@ -1,8 +1,10 @@
 package server
 
 import (
+	_ "expvar"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 
 	"github.com/coreos/fleet/client"
@@ -41,6 +43,7 @@ func NewDeploysterService(listen string, version string, username string, passwo
 	service.RootMux = tigertonic.NewTrieServeMux()
 	service.Mux = tigertonic.NewTrieServeMux()
 	service.RootMux.HandleNamespace("/v1", service.Mux)
+	service.RootMux.HandleNamespace("", service.authenticated(http.DefaultServeMux))
 	service.Server = tigertonic.NewServer(service.Listen, tigertonic.ApacheLogged(service.RootMux))
 	service.ConfigureRoutes()
 
