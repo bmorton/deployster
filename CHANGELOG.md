@@ -3,6 +3,7 @@
 Fixes:
 
   * Fixed incorrect default instance count in some cases ([#50][issue-50])
+  * Refactored polling/previous version destruction to be more efficient and clean up the code ([#52][issue-52])
 
 
 ## v0.3.0 - March 8th, 2015
@@ -53,3 +54,4 @@ Features:
 [issue-30]: https://github.com/bmorton/deployster/pull/30
 [issue-39]: https://github.com/bmorton/deployster/pull/39
 [issue-50]: https://github.com/bmorton/deployster/pull/50
+[issue-52]: https://github.com/bmorton/deployster/pull/52
