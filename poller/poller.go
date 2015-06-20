@@ -81,8 +81,6 @@ func (p *Poller) Watch() {
 			return
 		}
 	}
-
-	return
 }
 
 func (p *Poller) AddSuccessHandler(newHandler Handler) {
