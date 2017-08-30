@@ -1,3 +1,5 @@
+## This project has been abandoned. A pretty clear winner is emerging in this field and Fleet is now dead -- use Kubernetes instead!
+
 # Deployster
 
 Deployster uses a convention-over-configuration approach to simplify deploying Docker containers to a CoreOS [Fleet cluster][fleet-cluster] with zero downtime.
